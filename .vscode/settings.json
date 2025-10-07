@@ -1,0 +1,10 @@
+{
+    "idf.portWin": "COM40",
+    "idf.flashType": "UART",
+    "idf.espIdfPathWin": "C:\\Users\\dmarlin\\esp\\v5.1\\esp-idf",
+    "idf.toolsPathWin": "C:\\Users\\dmarlin\\.espressif",
+    "idf.pythonInstallPath": "C:\\Users\\dmarlin\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
+    "idf.openOcdConfigs": [
+        "board/esp32s3-builtin.cfg"
+    ]
+}
