@@ -15,7 +15,7 @@
 #include "lvgl.h"
 #include "lvgl_port.h"
 
-static const char *TAG = "lv_port";
+static const char *TAG = "CNJ_LCD4_lv_port";
 static SemaphoreHandle_t lvgl_mux;                  // LVGL mutex
 static TaskHandle_t lvgl_task_handle = NULL;
 

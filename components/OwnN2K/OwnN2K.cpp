@@ -1,11 +1,13 @@
 // uncomment to dump n2k messages to serial console as plain text
 // #define N2K_SERIAL_DUMP
 
+// Uncomment to enable logging of n2k messages
+//#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_err.h"
@@ -13,14 +15,12 @@
 #include <N2kMsg.h>
 #include <NMEA2000.h> // https://github.com/ttlappalainen/NMEA2000
 #include "sdkconfig.h"
-#define ESP32_CAN_TX_PIN (gpio_num_t) CONFIG_ESP32_CAN_TX_PIN  
-#define ESP32_CAN_RX_PIN (gpio_num_t) CONFIG_ESP32_CAN_RX_PIN
 #include <NMEA2000_esp32xx.h> // https://github.com/jiauka/NMEA2000_esp32xx
 #include "N2kMessages.h"
 #include <N2KDeviceList.h>
 #include "ESP32N2kStream.h"
 
-#define EXAMPLE_N2K_TASK_PRIORITY     10
+#define N2K_TASK_PRIORITY     10
 
 extern bool startUpDelayDone;
 extern uint32_t chipId;
@@ -137,14 +137,14 @@ void SendN2kWind() {
 // This is a FreeRTOS task
 void N2K_task(void *pvParameters)
 {
-//  Serial=new ESP32N2kStream();
-    ESP_LOGI(TAG, "Starting task");
+  //  Serial=new ESP32N2kStream();
+  ESP_LOGI(TAG, "Starting task");
 
   NMEA2000.SetProductInformation("V1", // Manufacturer's Model serial code
                                  103, // Manufacturer's product code
                                  "SN00000001",  // Manufacturer's Model ID
                                  "1.0.0.01 (2024-01-15)",  // Manufacturer's Software version code
-                                 "WS 4 Inch N2K Display" // Manufacturer's Model version
+                                 "CNJ 4 Inch N2K Display" // Manufacturer's Model version
                                  );
   // Set device information
   NMEA2000.SetDeviceInformation(chipId, // Unique number. Use e.g. Serial number.
@@ -193,21 +193,24 @@ void N2K_task(void *pvParameters)
 // Initialize N2K task
 extern "C" int OwnN2KInit(void)
 {
-    esp_err_t result = ESP_OK;
-    ESP_LOGV(TAG, "create task");
+  // enable verbose logging in this module
+  esp_log_level_set(TAG, ESP_LOG_VERBOSE);
+
+  esp_err_t result = ESP_OK;
+    ESP_LOGV(TAG, "Create N2K task");
     xTaskCreate(
         &N2K_task,            // Pointer to the task entry function.
         "N2K_task",           // A descriptive name for the task for debugging.
         3072,                 // size of the task stack in bytes.
         NULL,                 // Optional pointer to pvParameters
-        EXAMPLE_N2K_TASK_PRIORITY, // priority at which the task should run
+        N2K_TASK_PRIORITY, // priority at which the task should run
         &N2K_task_handle      // Optional pass back task handle
     );
 
     // check for issues on create
     if (N2K_task_handle == NULL)
     {
-        ESP_LOGE(TAG, "Unable to create task.");
+        ESP_LOGE(TAG, "Unable to create N2K task.");
         result = ESP_ERR_NO_MEM;
         goto err_out;
     } // end if
@@ -227,12 +230,9 @@ err_out:
 
 void engineRapidUpdate(const tN2kMsg &N2kMsg) {
     unsigned char SID;
-    //ESP_LOGI("N2K", "engineRapidUpdate");
     if (ParseN2kEngineParamRapid(N2kMsg,SID,locEngRPM,locEngBoost,locEngTilt) ) {
-      #ifdef SERIALDEBUG
-        Serial.print("Engine RPM ");
-        Serial.println(locEngRPM);
-      #endif  
+      // dump values
+      ESP_LOGV(TAG, "PGN 127488 EngineParamRapid --- Engine RPM %.2f EngineBoost %.2f Engine Tilt %i", locEngRPM, locEngBoost, locEngTilt);
     } // end if
 } // end rapidUpdate
 
@@ -245,17 +245,14 @@ void engineDynamicUpdate(const tN2kMsg &N2kMsg){
                       int8_t &EngineLoad, int8_t &EngineTorque) */
     //ESP_LOGI("N2K", "engineDynamicUpdate");
     ParseN2kEngineDynamicParam(N2kMsg, SID, locEngOilPres, locEngOilTemp, locEngCoolTemp, locEngAltVolt, locEngFuelRate, locEngHours, locEngCoolPres, locEngFuelPres, locEngLoad, locEngTorque);
-} // end enfineDynamicUpdate
+    ESP_LOGV(TAG, "PGN 127489 EngineDynamicUpdate --- EngineOilPres %.2f kpa EngineAltVolts %.2f volts EngineCoolTemp %.2f kelvin", locEngOilPres, locEngAltVolt, locEngCoolTemp);
+  } // end enfineDynamicUpdate
 
 void fluidLevel(const tN2kMsg &N2kMsg){
     unsigned char SID;
     if (ParseN2kFluidLevel(N2kMsg, SID, locFluidType, locLevel, locCapacity) ) {
       if (locFluidType == N2kft_Fuel) {
-      #ifdef SERIALDEBUG
-        Serial.print("Engine Fuel Level ");
-        Serial.print(locLevel);
-        Serial.println(" percent");
-      #endif
+        ESP_LOGV(TAG, "PGN 127505 FluidLevel --- Fluid Type %i FluidLevel %.2f Percent", locFluidType, locLevel);
       } // end if
     } // end if
 } // end fluidLevel
@@ -267,11 +264,7 @@ void batteryStatus(const tN2kMsg &N2kMsg){
 
     if (ParseN2kDCBatStatus(N2kMsg, locBattInst, locBattVolt, locBattCurrent, locBatteryTemp, SID) ) {
       if (locBattInst == 0) {
-      #ifdef SERIALDEBUG        
-        Serial.print("House Batt Voltage ");
-        Serial.print(locBattVolt);
-        Serial.println(" volts");
-      #endif
+        ESP_LOGV(TAG, "PGN 127508 BattStatus --- Batt Inst %i BattVolt %.2f Volts", locBattInst, locBattVolt);
       } // end if
     } // end if
 } // end batteryStatus
@@ -283,18 +276,10 @@ void temperatureExtended(const tN2kMsg &N2kMsg){
 
     if (ParseN2kPGN130316(N2kMsg, SID, locTempInstance, locTempSource, locTemp, locTempSet) ) {
       if (locTempSource == N2kts_EngineRoomTemperature) {
-      #ifdef SERIALDEBUG
-        Serial.print("Engine Room Temp ");
-        Serial.print(locTemp);
-        Serial.println(" Kelvin");
-      #endif
+        ESP_LOGV(TAG, "PGN 130316 Temp Extended --- Engine Room Temp  %.2f Kelvin", locTemp);
       } // end if
       if (locTempSource == N2kts_ExhaustGasTemperature) {
-      #ifdef SERIALDEBUG
-        Serial.print("Engine Exhaust Gas Temp ");
-        Serial.print(locTemp);
-        Serial.println(" Kelvin");
-      #endif
+        ESP_LOGV(TAG, "PGN 130316 Temp Extended --- Engine Exhaust Gas Temp   %.2f Kelvin", locTemp);
       } // end if
     } // end if
 } // end temperatureExtended
@@ -306,12 +291,6 @@ void cogsogRapid(const tN2kMsg &N2kMsg){
         return ParseN2kPGN129026(N2kMsg,SID,ref,COG,SOG); */
 
     if (ParseN2kCOGSOGRapid(N2kMsg, SID, locRef, locCOG, locSOG) ) {
-      #ifdef SERIALDEBUG
-        Serial.print("COG ");
-        Serial.print(locCOG);
-        Serial.print("   SOG ");
-        Serial.print(locSOG);
-        Serial.println(" m/s");
-      #endif          
+        ESP_LOGV(TAG, "PGN 129026 COGSOG Rapid --- COG %.2f SOG %.2f m/s", locCOG, locSOG);
     } // end if
 } // end temperatureExtended

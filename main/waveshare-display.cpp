@@ -14,7 +14,10 @@
 extern "C" {
   #include "sw6106.h"
 }
-static const char *TAG = "waveshare-display";
+#include "driver/ledc.h"
+#include "waveshare-display.h"
+
+static const char *TAG = "CNJ_LCD4_WS_DISP_lib";
 uint32_t blState=0;
 
 // lvgl graphics code
@@ -109,6 +112,11 @@ static void event_cb(lv_event_t * e)
     //esp_io_expander_set_level(io_expander, IO_EXPANDER_PIN_NUM_2, 1);
     esp_lcd_panel_disp_on_off(lcd_handle, true);
     blState=1; // track display state
+    // Set duty to 100%
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY_10));
+    // Update duty to apply the new value
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));        
+
   } else {
     if (lv_obj_has_flag(screenList, LV_OBJ_FLAG_HIDDEN)){
       // unhide
@@ -150,6 +158,10 @@ extern "C" void doLvglInit(){
     updateStatusBarTimer = lv_timer_create(updateStatusBar, 1000, NULL);
     // bl state is true
     blState=1;
+    // Set duty to 100%
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY_10));
+    // Update duty to apply the new value
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));        
 
     // do some img stuff
     //LV_IMAGE_DECLARE(img_cogwheel_argb);
@@ -650,6 +662,11 @@ static void listEventHandler(lv_event_t * e)
           lv_obj_add_flag(screenList, LV_OBJ_FLAG_HIDDEN);
           ESP_LOGI(TAG, "Backlight off ");              
           blState=0;
+          // Set duty to 0%
+          ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY_0));
+          // Update duty to apply the new value
+          ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));        
+
         } else if (!strcmp(selectedItem,"Restart")/*selectedItem.equalsIgnoreCase("Close")*/){
           ESP_LOGI(TAG, "Reset Requested");              
           // reboot

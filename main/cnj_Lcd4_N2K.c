@@ -27,6 +27,7 @@
 #include "esp_lcd_panel_io_additions.h"
 #include "esp_lcd_touch_gt911.h"
 #include "esp_lcd_st7701.h"
+#include "driver/ledc.h"
 #include "lv_demos.h"
 #include "lvgl_port.h"
 #include "esp_io_expander_tca9554.h"
@@ -35,6 +36,9 @@
 #include "OwnN2K.h"
 #include "waveshare-display.h"
 #include "wifi.h"
+
+// used to boot the board without a screen
+#define INCLUDE_DISPLAY
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
@@ -70,20 +74,25 @@
 #define EXAMPLE_LCD_IO_SPI_SCL (GPIO_NUM_2)
 #define EXAMPLE_LCD_IO_SPI_SDA (GPIO_NUM_1)
 #define EXAMPLE_LCD_IO_RST (-1)       // -1 if not used
-#define EXAMPLE_PIN_NUM_BK_LIGHT (-1) // -1 if not used
+#define EXAMPLE_PIN_NUM_BK_LIGHT (/*GPIO_NUM_4*/-1) // -1 if not used
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL (1)
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your touch spec ////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#if CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
+//#if CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
 #define TOUCH_HOST (I2C_NUM_0)
 #define EXAMPLE_PIN_NUM_TOUCH_SCL (GPIO_NUM_7)
 #define EXAMPLE_PIN_NUM_TOUCH_SDA (GPIO_NUM_15)
 #define EXAMPLE_PIN_NUM_TOUCH_RST (-1)          // -1 if not used
 #define EXAMPLE_PIN_NUM_TOUCH_INT (GPIO_NUM_16) // -1 if not used
-#endif
+//#endif
+
+// forward declaration
+static void ledc_init(void);
+
+extern int OneWireInit();
 
 #define NODE "CNJ_LCD4_N2K"
 static const char *TAG = NODE;
@@ -94,6 +103,7 @@ uint32_t chipId;
 bool startUpDelayDone=false;
 
 esp_io_expander_handle_t io_expander = NULL;
+esp_io_expander_handle_t io_expander_ext = NULL;
 esp_lcd_panel_handle_t lcd_handle = NULL;
 
 IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
@@ -101,6 +111,7 @@ IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const
     return lvgl_port_notify_rgb_vsync();
 }
 
+#ifdef INCLUDE_DISPLAY
 static const st7701_lcd_init_cmd_t lcd_init_cmds[] = {
     //  {cmd, { data }, data_size, delay_ms}
     {0x11, (uint8_t[]){0x00}, 0, 120},
@@ -139,7 +150,7 @@ static const st7701_lcd_init_cmd_t lcd_init_cmds[] = {
     {0x21, (uint8_t[]){0x00}, 0, 120},
     {0x29, (uint8_t[]){0x00}, 0, 0},
 };
-
+#endif
 
 // set everything up  
 void app_main(void)
@@ -185,7 +196,7 @@ void app_main(void)
     // setup i2c for lcd touch screen
     ESP_LOGI(TAG, "Initialize IOExpander bus");
 
-    // config the gpio expander
+    // config the onboard gpio expander
     ret = esp_io_expander_new_i2c_tca9554(TOUCH_HOST, ESP_IO_EXPANDER_I2C_TCA9554_ADDRESS_000, &io_expander);
 
     // config sopme gpio on expander
@@ -202,15 +213,15 @@ void app_main(void)
     esp_io_expander_set_level(io_expander, IO_EXPANDER_PIN_NUM_0, 1); 
     esp_io_expander_set_level(io_expander, IO_EXPANDER_PIN_NUM_2, 1); // BL ??
 
-    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0)
-    {
-        ESP_LOGI(TAG, "Turn off LCD backlight");
-        gpio_config_t bk_gpio_config = {
-            .mode = GPIO_MODE_OUTPUT,
-            .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT};
-        ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-    }
+    // setup i2c for lcd touch screen
+    ESP_LOGI(TAG, "Initialize IOExpander bus external");
 
+    // config the external gpio expander - test code
+    esp_io_expander_new_i2c_tca9554(TOUCH_HOST, ESP_IO_EXPANDER_I2C_TCA9554_ADDRESS_001, &io_expander_ext);
+
+    // led backlight, pwm output
+    ledc_init();
+    
     ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
     spi_line_config_t line_config = {
         .cs_io_type = IO_TYPE_GPIO,
@@ -224,6 +235,8 @@ void app_main(void)
     esp_lcd_panel_io_3wire_spi_config_t io_config = ST7701_PANEL_IO_3WIRE_SPI_CONFIG(line_config, 0);
     esp_lcd_panel_io_handle_t io_handle = NULL;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_3wire_spi(&io_config, &io_handle));
+
+#ifdef INCLUDE_DISPLAY
 
     ESP_LOGI(TAG, "Install ST7701 panel driver");
     esp_lcd_rgb_panel_config_t rgb_config = {
@@ -320,17 +333,18 @@ void app_main(void)
 #endif
     };
     esp_lcd_rgb_panel_register_event_callbacks(lcd_handle, &cbs, NULL);
-
-    // initialize the sw6106
-    ESP_LOGI(TAG, "Initialize sw6106 power bank controller driver");
-    ESP_ERROR_CHECK(sw6106Init(TOUCH_HOST));
-    ESP_LOGI(TAG, "Initialize sw6106 power bank controller done");
-
+#endif
     // Initialize N2K
     ESP_LOGI(TAG, "Initialize N2K");
     OwnN2KInit();
     ESP_LOGI(TAG, "Initialize N2K done");
 
+    // Initialize N2K
+    ESP_LOGI(TAG, "Initialize OneWire");
+    OneWireInit();
+    ESP_LOGI(TAG, "Initialize OneWire done");
+
+    #ifdef INCLUDE_DISPLAY
     // Lock the mutex due to the LVGL APIs are not thread-safe
     if (lvgl_port_lock(-1))
     {
@@ -338,5 +352,32 @@ void app_main(void)
         // Release the mutex
         lvgl_port_unlock();
     } // end if
+    #endif
     startUpDelayDone=true;
 } //end app_main
+
+static void ledc_init(void)
+{
+    // Prepare and then apply the LEDC PWM timer configuration
+    ledc_timer_config_t ledc_timer = {
+        .speed_mode       = LEDC_MODE,
+        .duty_resolution  = LEDC_DUTY_RES,
+        .timer_num        = LEDC_TIMER,
+        .freq_hz          = LEDC_FREQUENCY,  // Set output frequency at 4 kHz
+        .clk_cfg          = LEDC_AUTO_CLK
+    };
+    ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+
+    // Prepare and then apply the LEDC PWM channel configuration
+    ledc_channel_config_t ledc_channel = {
+        .speed_mode     = LEDC_MODE,
+        .channel        = LEDC_CHANNEL,
+        .timer_sel      = LEDC_TIMER,
+        .intr_type      = LEDC_INTR_DISABLE,
+        .gpio_num       = LEDC_OUTPUT_IO,
+        .duty           = LEDC_DUTY_0, // Set initial duty to 0%
+        .hpoint         = 0
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+} // end ledc init
+

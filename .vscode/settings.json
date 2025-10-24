@@ -1,10 +1,22 @@
 {
-    "idf.portWin": "COM40",
-    "idf.flashType": "UART",
-    "idf.espIdfPathWin": "C:\\Users\\dmarlin\\esp\\v5.1\\esp-idf",
-    "idf.toolsPathWin": "C:\\Users\\dmarlin\\.espressif",
-    "idf.pythonInstallPath": "C:\\Users\\dmarlin\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
-    "idf.openOcdConfigs": [
-        "board/esp32s3-builtin.cfg"
-    ]
+  "idf.espIdfPathWin": "C:\\Users\\dmarlin\\esp\\v5.3.4\\esp-idf",
+  "idf.toolsPathWin": "C:\\Users\\dmarlin\\.espressif",
+  "idf.pythonInstallPath": "C:\\Users\\dmarlin\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
+  "idf.openOcdConfigs": [
+    "board/esp32s3-builtin.cfg"
+  ],
+  "idf.customExtraVars": {
+    "OPENOCD_SCRIPTS": "C:\\Users\\dmarlin\\.espressif\\tools\\openocd-esp32\\v0.12.0-esp32-20240318/openocd-esp32/share/openocd/scripts",
+    "IDF_CCACHE_ENABLE": "1",
+    "ESP_ROM_ELF_DIR": "C:\\Users\\dmarlin\\.espressif\\tools\\esp-rom-elfs\\20240305/",
+    "IDF_TARGET": "esp32s3"
+  },
+  "clangd.path": "C:\\Users\\dmarlin\\.espressif\\tools\\esp-clang\\16.0.1-fe4f10a809\\esp-clang\\bin\\clangd.exe",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=C:\\Users\\dmarlin\\.espressif\\tools\\xtensa-esp-elf\\esp-13.2.0_20240530\\xtensa-esp-elf\\bin\\xtensa-esp32s3-elf-gcc.exe",
+    "--compile-commands-dir=c:\\Users\\dmarlin\\Documents\\PlatformIO\\Projects\\cnjboards\\CNJ_LCD4_N2K\\build"
+  ],
+  "idf.portWin": "COM10",
+  "idf.flashType": "UART"
 }
