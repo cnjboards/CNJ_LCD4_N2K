@@ -1,0 +1,2 @@
+extern esp_io_expander_handle_t io_expander;
+extern esp_io_expander_handle_t io_expander_ext;

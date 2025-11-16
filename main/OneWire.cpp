@@ -1,5 +1,5 @@
 // uncomment to enable debugging
-//#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -16,7 +16,7 @@
 
 #define ONEWIRE_TASK_PRIORITY     15
 
-static const char *TAG = "CNJ_LCD4_OW_lib";
+static const char *TAG = "CNJ_LCD4_OW";
 static TaskHandle_t OneWire_task_handle = NULL;
 
 // Onewire stuff
@@ -170,7 +170,7 @@ extern "C" int OneWireInit()
     xTaskCreate(
         &OneWire_task,            // Pointer to the task entry function.
         "OneWire_task",           // A descriptive name for the task for debugging.
-        2048,                 // size of the task stack in bytes.
+        4096,                 // size of the task stack in bytes.
         NULL,                 // Optional pointer to pvParameters
         ONEWIRE_TASK_PRIORITY, // priority at which the task should run
         &OneWire_task_handle      // Optional pass back task handle
