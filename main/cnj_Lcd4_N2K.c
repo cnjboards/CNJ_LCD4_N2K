@@ -66,6 +66,8 @@ IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const
 void app_main(void)
 {
     uint8_t chipid [ 6 ];
+    uint32_t err;
+
     // derive a unique chip id from the burned in MAC address
     esp_efuse_mac_get_default ( chipid );
     for ( int i = 0 ; i < 6 ; i++ )
@@ -220,8 +222,14 @@ void app_main(void)
             .mirror_y = 0,
         },
     };
-    ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &tp_handle));
-    ESP_ERROR_CHECK(lvgl_port_init(lcd_handle, tp_handle));
+    err = ESP_ERROR_CHECK_WITHOUT_ABORT(esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &tp_handle));
+    //ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &tp_handle));
+    if (err == ESP_OK) 
+        // have touch
+        ESP_ERROR_CHECK(lvgl_port_init(lcd_handle, tp_handle));
+    else
+        // no touch
+        ESP_ERROR_CHECK(lvgl_port_init(lcd_handle, NULL));
 
     esp_lcd_rgb_panel_event_callbacks_t cbs = {
 #if EXAMPLE_RGB_BOUNCE_BUFFER_SIZE > 0
