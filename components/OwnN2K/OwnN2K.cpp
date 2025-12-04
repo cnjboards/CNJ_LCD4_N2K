@@ -42,6 +42,7 @@ const unsigned long TransmitMessages[] PROGMEM={130306L,0};
 // IsDefaultFastPacketMessage) and message first start offsets. Use a bit different offset for
 // each message so they will not be sent at same time.
 tN2kSyncScheduler WindScheduler(false,1000,500); // Send wind data every 1s
+tN2kSyncScheduler n2kNoMsgWatchdog(false,1000,500); // used to monitor n2k for messages
 
 // forward declaration
 tN2kDeviceList *pN2kDeviceList;
@@ -63,12 +64,18 @@ unsigned char locBattInst;
 double locBattVolt, locBattCurrent, locBatteryTemp;
 double locEngBoost;
 int8_t locEngTilt;
-//double locEngCoolPres, locEngFuelPres;
 int8_t locEngLoad, locEngTorque;
 double locLevel, locCapacity;
 tN2kFluidType locFluidType;
 double locTemp, locTempSet;
 tN2kTempSource locTempSource;
+tN2kEngineDiscreteStatus1 locStat1;
+tN2kEngineDiscreteStatus2 locStat2;
+tN2kDeviceList *locN2KDeviceList;
+uint8_t n2kConnected = 0; // # stations on bus
+bool n2kUp = 0; // whether link is up or down
+#define N2KNOMSGTIMEOUT 5 // how long before we declare N2K down
+uint8_t n2kNoMsgCnt = N2KNOMSGTIMEOUT;
 
 // forward declaration
 // callbacks for items to be displayed
@@ -95,6 +102,7 @@ tNMEA2000Handler NMEA2000Handlers[]={
 void OnN2kOpen() {
   // Start schedulers now.
   WindScheduler.UpdateNextTime();
+  n2kNoMsgWatchdog.UpdateNextTime(); // part of message watcdog  
 }
 
 void HandleStreamN2kMsg(const tN2kMsg &N2kMsg) {
@@ -134,6 +142,22 @@ void SendN2kWind() {
   }
 } // end sendN2Kwind
 
+// *****************************************************************************
+void n2kMsgWatchdog() {
+  if ( n2kNoMsgWatchdog.IsTime() ){
+    n2kNoMsgWatchdog.UpdateNextTime();
+    // increment the no message counter
+    n2kNoMsgCnt++;
+    if (n2kNoMsgCnt >= N2KNOMSGTIMEOUT){
+      // if count gets high, no messages coming in, bus is down
+      n2kNoMsgCnt = N2KNOMSGTIMEOUT;
+      n2kUp = 0;
+    } else
+      // bus is up
+      n2kUp = 1;
+  } // end if
+} // end n2kNoMsgWatchdog
+
 // This is a FreeRTOS task
 void N2K_task(void *pvParameters)
 {
@@ -160,6 +184,7 @@ void N2K_task(void *pvParameters)
 
   // If you also want to see all traffic on the bus use N2km_ListenAndNode instead of N2km_NodeOnly below
   NMEA2000.SetMode(tNMEA2000::N2km_ListenAndNode,53);
+  locN2KDeviceList = new tN2kDeviceList(&NMEA2000); // capture who is on N2K bus, should have at least 1
   // NMEA2000.SetDebugMode(tNMEA2000::dm_Actisense); // Uncomment this, so you can test code without CAN bus chips on Arduino Mega
   #ifdef N2K_SERIAL_DUMP
     NMEA2000.SetForwardStream(&Serial); // PC output on native port
@@ -186,6 +211,10 @@ void N2K_task(void *pvParameters)
         vTaskDelayUntil(&pxPreviousWakeTime, 1); // yield until next tick (should be 1ms) so other tasks can do stuff
         SendN2kWind();
         NMEA2000.ParseMessages();
+        // record the number of devices on n2k bus
+        n2kConnected = locN2KDeviceList->Count();
+        // update msg counting wdog
+        n2kMsgWatchdog();
     } // end for
     vTaskDelete(NULL); // should never get here...
 } // end n2k task
@@ -231,6 +260,7 @@ err_out:
 void engineRapidUpdate(const tN2kMsg &N2kMsg) {
     unsigned char SID;
     if (ParseN2kEngineParamRapid(N2kMsg,SID,locEngRPM,locEngBoost,locEngTilt) ) {
+      if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message 
       // dump values
       ESP_LOGV(TAG, "PGN 127488 EngineParamRapid --- Engine RPM %.2f EngineBoost %.2f Engine Tilt %i", locEngRPM, locEngBoost, locEngTilt);
     } // end if
@@ -244,14 +274,17 @@ void engineDynamicUpdate(const tN2kMsg &N2kMsg){
                       double &FuelRate, double &EngineHours, double &EngineCoolantPress, double &EngineFuelPress,
                       int8_t &EngineLoad, int8_t &EngineTorque) */
     //ESP_LOGI("N2K", "engineDynamicUpdate");
-    ParseN2kEngineDynamicParam(N2kMsg, SID, locEngOilPres, locEngOilTemp, locEngCoolTemp, locEngAltVolt, locEngFuelRate, locEngHours, locEngCoolPres, locEngFuelPres, locEngLoad, locEngTorque);
-    ESP_LOGV(TAG, "PGN 127489 EngineDynamicUpdate --- EngineOilPres %.2f kpa EngineAltVolts %.2f volts EngineCoolTemp %.2f kelvin", locEngOilPres, locEngAltVolt, locEngCoolTemp);
+    if(ParseN2kEngineDynamicParam(N2kMsg, SID, locEngOilPres, locEngOilTemp, locEngCoolTemp, locEngAltVolt, locEngFuelRate, locEngHours, locEngCoolPres, locEngFuelPres, locEngLoad, locEngTorque, locStat1, locStat2)){
+      if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message 
+      ESP_LOGV(TAG, "PGN 127489 EngineDynamicUpdate --- EngineOilPres %.2f kpa EngineAltVolts %.2f volts EngineCoolTemp %.2f kelvin", locEngOilPres, locEngAltVolt, locEngCoolTemp);
+    } // end if
   } // end enfineDynamicUpdate
 
 void fluidLevel(const tN2kMsg &N2kMsg){
     unsigned char SID;
     if (ParseN2kFluidLevel(N2kMsg, SID, locFluidType, locLevel, locCapacity) ) {
       if (locFluidType == N2kft_Fuel) {
+        if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
         ESP_LOGV(TAG, "PGN 127505 FluidLevel --- Fluid Type %i FluidLevel %.2f Percent", locFluidType, locLevel);
       } // end if
     } // end if
@@ -264,6 +297,7 @@ void batteryStatus(const tN2kMsg &N2kMsg){
 
     if (ParseN2kDCBatStatus(N2kMsg, locBattInst, locBattVolt, locBattCurrent, locBatteryTemp, SID) ) {
       if (locBattInst == 0) {
+        if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
         ESP_LOGV(TAG, "PGN 127508 BattStatus --- Batt Inst %i BattVolt %.2f Volts", locBattInst, locBattVolt);
       } // end if
     } // end if
@@ -276,9 +310,11 @@ void temperatureExtended(const tN2kMsg &N2kMsg){
 
     if (ParseN2kPGN130316(N2kMsg, SID, locTempInstance, locTempSource, locTemp, locTempSet) ) {
       if (locTempSource == N2kts_EngineRoomTemperature) {
+        if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
         ESP_LOGV(TAG, "PGN 130316 Temp Extended --- Engine Room Temp  %.2f Kelvin", locTemp);
       } // end if
       if (locTempSource == N2kts_ExhaustGasTemperature) {
+        if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
         ESP_LOGV(TAG, "PGN 130316 Temp Extended --- Engine Exhaust Gas Temp   %.2f Kelvin", locTemp);
       } // end if
     } // end if
@@ -286,11 +322,10 @@ void temperatureExtended(const tN2kMsg &N2kMsg){
 
 void cogsogRapid(const tN2kMsg &N2kMsg){
     unsigned char SID, locTempInstance;
-
     /*inline bool ParseN2kCOGSOGRapid(const tN2kMsg &N2kMsg, unsigned char &SID, tN2kHeadingReference &ref, double &COG, double &SOG) {
         return ParseN2kPGN129026(N2kMsg,SID,ref,COG,SOG); */
-
     if (ParseN2kCOGSOGRapid(N2kMsg, SID, locRef, locCOG, locSOG) ) {
+        if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
         ESP_LOGV(TAG, "PGN 129026 COGSOG Rapid --- COG %.2f SOG %.2f m/s", locCOG, locSOG);
     } // end if
-} // end temperatureExtended
+} // end cogsograpid

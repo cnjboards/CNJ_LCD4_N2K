@@ -31,10 +31,10 @@ extern double locSOG;
 extern tN2kHeadingReference locRef;
 extern double locWindSpeed, locWindAngle;
 extern tN2kWindReference locWindReference;
-
-extern bool lipoPresent;
-extern unsigned int soc;
-extern int current;
+extern tN2kEngineDiscreteStatus1 locStat1; 
+extern tN2kEngineDiscreteStatus2 locStat2;
+extern uint8_t n2kConnected;
+extern bool n2kUp;
 
 extern char myIpAddressSta[];
 extern char *wifiStaSsid;

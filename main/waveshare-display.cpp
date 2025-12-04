@@ -11,11 +11,9 @@
 #include "esp_wifi.h"
 #include "Globals.h"
 #include "esp_lcd_panel_ops.h"
-extern "C" {
-  #include "sw6106.h"
-}
 #include "driver/ledc.h"
 #include "waveshare-display.h"
+#include "statusBar.h"
 
 static const char *TAG = "CNJ_LCD4_WS_DISP_lib";
 uint32_t blState=0;
@@ -23,10 +21,13 @@ uint32_t blState=0;
 // lvgl graphics code
 // objects for display
 static lv_style_t border_style;
+static lv_style_t screen1_style;
 static lv_style_t status_style;
 static lv_style_t smallBorder_style;
 static lv_style_t style_btn;
 static lv_style_t body_style;
+static lv_style_t largeGuageStyle;
+static lv_style_t smallGuageStyle;
 static lv_style_t indicator_style;
 static lv_style_t smallIndicator_style;
 static lv_style_t statusBarText_style;
@@ -81,6 +82,10 @@ static lv_obj_t *screen4Text;
 static lv_obj_t *screen5Text;
 static lv_obj_t *img;
 
+// guage graphic objects
+static lv_obj_t *engineOk;
+static lv_obj_t *engineCheck;
+
 // list of screen names, simple but works
 #define SCREEN_1_NAME "Motoring"
 #define SCREEN_2_NAME "Sailing"
@@ -90,7 +95,7 @@ static lv_obj_t *img;
 
 // forward declarations
 static void setStyle();
-static void buildStatusBar(lv_obj_t *);
+//static void buildStatusBar(lv_obj_t *);
 static void buildScreen1(void);
 static void buildScreen2(void);
 static void buildScreen3(void);
@@ -100,7 +105,7 @@ static void buildRPMGuage();
 static void buildOilGuage();
 static void buildTempGuage();
 static void updateMainScreen(lv_timer_t *);
-static void updateStatusBar(lv_timer_t *);
+//static void updateStatusBar(lv_timer_t *);
 static void buildScreenList(lv_obj_t *);
 
 // handle screen event
@@ -181,16 +186,34 @@ static void setStyle() {
   lv_style_set_text_font(&border_style, &lv_font_montserrat_20);
 
   // overall style 
-  lv_style_init(&status_style);
-  lv_style_set_border_width(&status_style, 3);
-  lv_style_set_border_color(&status_style, lv_color_black());
-  lv_style_set_text_font(&status_style, &lv_font_montserrat_14);
+  // screen styles
+  lv_style_init(&screen1_style);
+  lv_style_set_bg_color(&screen1_style, lv_color_black());
+  //lv_style_set_bg_opa(&screen1_style, 100);
+  lv_style_set_text_font(&screen1_style, &lv_font_montserrat_20);
 
   // body style 
   lv_style_init(&body_style);
   lv_style_set_border_width(&body_style, 2);
   lv_style_set_border_color(&body_style, lv_color_black());
   lv_style_set_text_font(&body_style, &lv_font_montserrat_20);
+
+  // large meter style
+  lv_style_init(&largeGuageStyle);
+  lv_style_set_bg_color(&largeGuageStyle, lv_color_hex(0x808080));
+  lv_style_set_border_color(&largeGuageStyle, lv_color_black());
+  lv_style_set_bg_opa(&largeGuageStyle, 100);
+  lv_style_set_text_color(&largeGuageStyle, lv_color_white());
+  lv_style_set_text_font(&largeGuageStyle, &lv_font_montserrat_20);
+
+  // large meter style
+  lv_style_init(&smallGuageStyle);
+  lv_style_set_bg_color(&smallGuageStyle, lv_color_hex(0x808080));
+  lv_style_set_border_color(&smallGuageStyle, lv_color_black());
+  //lv_style_set_border_width(&status_style, 0); // no border
+  lv_style_set_bg_opa(&smallGuageStyle, 75);
+  lv_style_set_text_color(&smallGuageStyle, lv_color_white());
+  lv_style_set_text_font(&smallGuageStyle, &lv_font_montserrat_14);
 
   // small text version 
   lv_style_init(&smallBorder_style);
@@ -200,17 +223,17 @@ static void setStyle() {
 
   // style for indicator readouts
   lv_style_init(&indicator_style);
-  lv_style_set_border_width(&indicator_style, 2);
+  lv_style_set_border_width(&indicator_style, 4);
   lv_style_set_radius(&indicator_style,4);
-  lv_style_set_border_color(&indicator_style, lv_palette_main(LV_PALETTE_GREY));
+  lv_style_set_border_color(&indicator_style, lv_color_black()/*lv_palette_main(LV_PALETTE_GREY)*/);
   lv_style_set_text_font(&indicator_style, &lv_font_montserrat_20);
 
   // style for indicator readouts
   lv_style_init(&smallIndicator_style);
-  lv_style_set_border_width(&smallIndicator_style, 1);
+  lv_style_set_border_width(&smallIndicator_style, 2);
   lv_style_set_radius(&smallIndicator_style,2);
-  lv_style_set_border_color(&smallIndicator_style, lv_palette_main(LV_PALETTE_GREY));
-  lv_style_set_text_font(&indicator_style, &lv_font_montserrat_10);
+  lv_style_set_border_color(&smallIndicator_style, lv_color_black());
+  lv_style_set_text_font(&indicator_style, &lv_font_montserrat_12);
 
   // status bar, wifi text (changes color with connectivity)
   lv_style_init(&style_btn);
@@ -230,11 +253,16 @@ static void setStyle() {
   lv_style_set_bg_color(&vertBarStyleIndic, lv_palette_main(LV_PALETTE_BLUE));
   lv_style_set_radius(&vertBarStyleIndic, 0);
 
+  // init style elements for status bar
+  initStatusStyle();
+
 } // end setstyle
 
 // some constants for various display elements
 #define MS_HIEGHT 480 // allow for a little room at the sides
 #define MS_WIDTH 480 
+
+#if 0
 #define STATUS_BAR_HIEGHT 35
 
 // generic status bar for project
@@ -308,40 +336,15 @@ static void updateStatusBar(lv_timer_t *timer)
       lv_label_set_text(ssidLabel, buff);
       //lv_obj_align(ssidLabel, LV_ALIGN_LEFT_MID, 160, 8);
   } // end if
-  // update battery stuff on status bar
-  if (lipoPresent == true){
-    // parse state of charge
-    lv_style_set_text_color(&status_style, lv_color_make(10,100,10));
-    if (soc <= 10) {
-      lv_label_set_text(battLabel, "" LV_SYMBOL_BATTERY_EMPTY);
-      lv_style_set_text_color(&status_style, lv_color_make(100,10,10));
-    } else if (soc <= 35)
-      lv_label_set_text(battLabel, "" LV_SYMBOL_BATTERY_1);
-    else if (soc <= 60)
-      lv_label_set_text(battLabel, "" LV_SYMBOL_BATTERY_2);
-    else if (soc <= 80)
-      lv_label_set_text(battLabel, "" LV_SYMBOL_BATTERY_3);
-    else
-      lv_label_set_text(battLabel, "" LV_SYMBOL_BATTERY_FULL);
-  } else {
-      // no lipo present
-      lv_label_set_text(battLabel, "" LV_SYMBOL_CLOSE);
-  } // end if
-  // now check if we are charging, must be greater then 5mA
-  if (current > 5){
-    lv_style_set_text_color(&status_style, lv_color_make(10,100,10));
-    lv_label_set_text(chrgLabel, "" LV_SYMBOL_CHARGE);
-  } else {
-    lv_style_set_text_color(&status_style, lv_color_make(100,10,10));
-    lv_label_set_text(chrgLabel, "" );
-  } // end if
+  // 
 } // end update status bar
+#endif
 
 // screen 1 builder
 static void buildScreen1(void) {
   // main screen frame
   Screen1 = lv_obj_create(NULL);
-  lv_obj_add_style(Screen1, &border_style, 0);
+  lv_obj_add_style(Screen1, &screen1_style, 0);
   lv_obj_set_size(Screen1, MS_WIDTH, MS_HIEGHT);
   lv_obj_align(Screen1, LV_ALIGN_BOTTOM_MID, 0, 0);
   lv_obj_set_scrollbar_mode(Screen1, LV_SCROLLBAR_MODE_OFF);
@@ -457,9 +460,26 @@ static void buildScreen5(void) {
 static void buildRPMGuage() {
   // create and rpm guage on main display
   engineRpmGauge = lv_meter_create(Screen1);
-  // this removes the outline, allows for more usable space
-  lv_obj_remove_style(engineRpmGauge, NULL, LV_PART_MAIN);
-  
+  lv_obj_add_style(engineRpmGauge, &largeGuageStyle, 0);
+
+  // declare images for check engine
+  LV_IMG_DECLARE(engine_ok); // basically this finds external ref
+  LV_IMG_DECLARE(engine_check); // basically this finds external ref
+ 
+  // check engine stuff - OK
+  engineOk = lv_img_create(engineRpmGauge);
+  lv_obj_add_flag(engineOk, LV_OBJ_FLAG_HIDDEN);
+  lv_img_set_src(engineOk, &engine_ok);
+  lv_obj_align(engineOk, LV_ALIGN_CENTER, 0, 200);
+  lv_obj_set_size(engineOk, 128, 128);
+
+  // check engine stuff - Check
+  engineCheck = lv_img_create(engineRpmGauge);
+  lv_obj_add_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);
+  lv_img_set_src(engineCheck, &engine_check);
+  lv_obj_align(engineCheck, LV_ALIGN_CENTER, 0, 200);
+  lv_obj_set_size(engineCheck, 128, 128);
+
   // Locate and set size of rpm guage
   lv_obj_align_to(engineRpmGauge, Screen1, LV_ALIGN_CENTER, ENGINE_RPM_GUAGE_XOFFSET, ENGINE_RPM_GUAGE_YOFFSET);
   lv_obj_set_size(engineRpmGauge, RPM_GUAGE_WIDTH, RPM_GUAGE_HIEGHT);
@@ -504,40 +524,27 @@ static void buildRPMGuage() {
   /* display the rpm in numerical format as well */
   engineRPMIndicator = lv_label_create(engineRpmGauge);
   lv_obj_add_style(engineRPMIndicator, &indicator_style, 0);
-  lv_obj_align_to(engineRPMIndicator, engineRpmGauge, LV_ALIGN_CENTER, -38, 18);
+  lv_obj_align_to(engineRPMIndicator, engineRpmGauge, LV_ALIGN_CENTER, -100, 18);
   lv_obj_set_style_text_font(engineRPMIndicator, &lv_font_montserrat_34, 0);
   lv_label_set_text_fmt(engineRPMIndicator, " %04d ", 0);
-
-/* some static text on the display */
-  sogText = lv_label_create(engineRpmGauge);
-  lv_obj_align_to(sogText, engineRpmGauge, LV_ALIGN_CENTER, -120, -45);
-  lv_obj_set_style_text_font(sogText, &lv_font_montserrat_24, 0);
-  lv_label_set_text(sogText,"SOG");
-
-  /* display the sog in numerical format as well */
-  sogIndicator = lv_label_create(engineRpmGauge);
-  lv_obj_add_style(sogIndicator, &indicator_style, 0);
-  lv_obj_align_to(sogIndicator, engineRpmGauge, LV_ALIGN_CENTER, -150, -20);
-  lv_obj_set_style_text_font(sogIndicator, &lv_font_montserrat_24, 0);
-  lv_label_set_text_fmt(sogIndicator, "%03.1f knts", (float)(locSOG * 1.944));
 
 } // end buildrpmguage
 
 // locate engine oil guage on the main screen relative to centre of Screen1 object
 // +ve Y is down
 // +ve X is right
-#define ENGINE_OIL_GUAGE_HIEGHT 150
-#define ENGINE_OIL_GUAGE_WIDTH 150
-#define ENGINE_OIL_GUAGE_XOFFSET 82
+#define ENGINE_OIL_GUAGE_HIEGHT 135
+#define ENGINE_OIL_GUAGE_WIDTH 135
+#define ENGINE_OIL_GUAGE_XOFFSET 70
 #define ENGINE_OIL_GUAGE_YOFFSET 0
 
 // build the oil pressure on the main screen
 static void buildOilGuage() {
   // create and rpm guage on main display
   engineOilGauge = lv_meter_create(Screen1);
-  lv_obj_add_style(engineOilGauge, &smallBorder_style, 0);
+  lv_obj_add_style(engineOilGauge, &smallGuageStyle, 0);
   lv_obj_remove_style(engineOilGauge, NULL, LV_PART_MAIN);
-
+  lv_obj_set_style_text_color(engineOilGauge, lv_color_white(), 0);
   // set the size
   lv_obj_set_size(engineOilGauge, ENGINE_OIL_GUAGE_WIDTH, ENGINE_OIL_GUAGE_HIEGHT);
   lv_obj_align_to(engineOilGauge, Screen1, LV_ALIGN_CENTER, ENGINE_OIL_GUAGE_XOFFSET, ENGINE_OIL_GUAGE_YOFFSET);
@@ -556,16 +563,16 @@ static void buildOilGuage() {
 
   /* Green range - ticks */
   engineOilIndic = lv_meter_add_scale_lines(engineOilGauge, scale, lv_palette_main(LV_PALETTE_GREEN), lv_palette_main(LV_PALETTE_GREEN),false, 0);
-  lv_meter_set_indicator_start_value(engineOilGauge, engineRpmIndic, 20);
-  lv_meter_set_indicator_end_value(engineOilGauge, engineRpmIndic, 80);
+  lv_meter_set_indicator_start_value(engineOilGauge, engineOilIndic, 20);
+  lv_meter_set_indicator_end_value(engineOilGauge, engineOilIndic, 80);
 
   /* Red range - arc */
-  engineOilIndic = lv_meter_add_arc(engineOilGauge, scale, 2, lv_palette_main(LV_PALETTE_BLUE), 0);
+  engineOilIndic = lv_meter_add_arc(engineOilGauge, scale, 2, lv_palette_main(LV_PALETTE_RED), 0);
   lv_meter_set_indicator_start_value(engineOilGauge, engineOilIndic, 0);
   lv_meter_set_indicator_end_value(engineOilGauge, engineOilIndic, 20);
 
   /* Red range - arc */
-  engineOilIndic = lv_meter_add_scale_lines(engineOilGauge, scale, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_BLUE), false,0);
+  engineOilIndic = lv_meter_add_scale_lines(engineOilGauge, scale, lv_palette_main(LV_PALETTE_RED), lv_palette_main(LV_PALETTE_RED), false,0);
   lv_meter_set_indicator_start_value(engineOilGauge, engineOilIndic, 0);
   lv_meter_set_indicator_end_value(engineOilGauge, engineOilIndic, 20);
 
@@ -573,23 +580,18 @@ static void buildOilGuage() {
   engineOilIndic = lv_meter_add_needle_line(engineOilGauge, scale, 3, lv_palette_main(LV_PALETTE_BLUE_GREY), -25);
   lv_meter_set_indicator_value(engineOilGauge, engineOilIndic, 0);
 
-  /* some static text on the display */
-  engineOilText = lv_label_create(engineOilGauge);
-  lv_obj_align_to(engineOilText, engineOilGauge, LV_ALIGN_CENTER, 30, 22);
-  lv_obj_set_style_text_font(engineOilText, &lv_font_montserrat_20, 0);
-  lv_label_set_text(engineOilText,"Psi");
-
   /* display the rpm in numerical format as well */
   engineOilIndicator = lv_label_create(engineOilGauge);
-  lv_obj_align_to(engineOilIndicator, engineOilGauge, LV_ALIGN_CENTER, -40, 25);
-  lv_obj_set_style_text_font(engineOilIndicator, &lv_font_unscii_16, 0);
-  lv_label_set_text_fmt(engineOilIndicator, " %03d ", 0);
+  lv_obj_add_style(engineOilIndicator, &smallIndicator_style, 0);
+  lv_obj_align_to(engineOilIndicator, engineOilGauge, LV_ALIGN_CENTER, -7, 25);
+  lv_obj_set_style_text_font(engineOilIndicator, &lv_font_montserrat_12, 0);
+  lv_label_set_text_fmt(engineOilIndicator, " %03d Psi ", 0);
 
-  /* display the rpm in numerical format as well */
-  engineOilTitleText = lv_label_create(Screen1);
-  lv_obj_align_to(engineOilTitleText, engineOilGauge, LV_ALIGN_CENTER, -18, -110);
-  lv_obj_set_style_text_font(engineOilTitleText, &lv_font_montserrat_18, 0);
-  lv_label_set_text(engineOilTitleText, "    Oil  \nPressure");
+  /* add a label */
+  static lv_obj_t *engineOilTitleText = lv_label_create(engineOilGauge);
+  lv_obj_align_to(engineOilTitleText, engineOilGauge, LV_ALIGN_CENTER, -20, 45);
+  lv_obj_set_style_text_font(engineOilTitleText, &lv_font_montserrat_12, 0);
+  lv_label_set_text(engineOilTitleText, "Oil Pressure");
 
 } // end buildoilguage
 
@@ -603,6 +605,7 @@ static void buildOilGuage() {
 #define TEMP_GUAGE_YOFFSET_TXT 35
 #define GUAGE_SEPARATION_X 70
 
+#if 0
 static void tempGuageBar_event_cb(lv_event_t * e)
 {
     lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
@@ -641,6 +644,7 @@ static void tempGuageBar_event_cb(lv_event_t * e)
 
     lv_draw_label(dsc->draw_ctx, &label_dsc, &txt_area, buf, NULL);
 } // end tempGuageBar_event_cb
+#endif
 
 // screen list handler - manage screen navigation
 static void listEventHandler(lv_event_t * e)
@@ -839,15 +843,17 @@ static void updateMainScreen(lv_timer_t *timer)
     // display engine rpm
     lv_label_set_text_fmt(engineRPMIndicator, " %04ld ", (uint32_t)(locEngRPM));
     
+    #if 0
     // Update SOG
     lv_label_set_text_fmt(sogIndicator, "%03.1lf knts", (float)(locSOG * 1.944));
+    #endif
 
     // needle is oil pressure  psi
     uint32_t locOilP = (uint32_t)(locEngOilPres/6894.75);
     lv_meter_set_indicator_value(engineOilGauge, engineOilIndic, locOilP);
     // display oil pressure psi
-    lv_label_set_text_fmt(engineOilIndicator, " %03d ", (int)locOilP);
-
+    lv_label_set_text_fmt(engineOilIndicator, " %03d Psi", (int)locOilP);
+  
     // Engine temp degF
     // (296K − 273.15) × 9/5 + 32
     int32_t locEngTemp = (int32_t)((((locEngCoolTemp-273.15)*(9.0/5.0))+32.0));

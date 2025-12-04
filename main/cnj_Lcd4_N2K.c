@@ -32,7 +32,6 @@
 #include "lvgl_port.h"
 #include "esp_io_expander_tca9554.h"
 #include "driver/gpio.h"
-#include "sw6106.h"
 #include "OwnN2K.h"
 #include "waveshare-display.h"
 #include "wifi.h"
@@ -52,8 +51,6 @@ uint32_t chipId;
 // global flag for startup complete
 bool startUpDelayDone=false;
 
-//esp_io_expander_handle_t io_expander = NULL;
-//esp_io_expander_handle_t io_expander_ext = NULL;
 esp_lcd_panel_handle_t lcd_handle = NULL;
 
 IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
