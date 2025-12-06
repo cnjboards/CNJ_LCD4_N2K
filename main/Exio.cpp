@@ -1,5 +1,5 @@
 // uncomment to enable debugging
-#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+// #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
 
 #include <stdio.h>
 #include <string.h>

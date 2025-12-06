@@ -143,6 +143,10 @@ void SendN2kWind() {
 } // end sendN2Kwind
 
 // *****************************************************************************
+// crude watchdog for n2k link
+// every message rx'd decrements the counter
+// every tick of this increments the counter
+// when counter is too big, then no n2k traffic, we have an issue.
 void n2kMsgWatchdog() {
   if ( n2kNoMsgWatchdog.IsTime() ){
     n2kNoMsgWatchdog.UpdateNextTime();
@@ -158,9 +162,11 @@ void n2kMsgWatchdog() {
   } // end if
 } // end n2kNoMsgWatchdog
 
-// This is a FreeRTOS task
+// Task to handle N2K comms
 void N2K_task(void *pvParameters)
 {
+  static TickType_t pxPreviousWakeTime;
+
   //  Serial=new ESP32N2kStream();
   ESP_LOGI(TAG, "Starting task");
 
@@ -199,24 +205,24 @@ void N2K_task(void *pvParameters)
   NMEA2000.SetOnOpen(OnN2kOpen);
   NMEA2000.Open();
 
-#if (configTICK_RATE_HZ != 1000)
-#warning "set FreeRTOS tick rate to 1000Hz in menuconfig!"
-  ESP_LOGW(TAG, "set FreeRTOS tick rate to 1000Hz in menuconfig!");
-#endif
-    // main N2K loop
-    for (;;)
-    {
-        // put your main code here, to run repeatedly:
-        static TickType_t pxPreviousWakeTime = 0;
-        vTaskDelayUntil(&pxPreviousWakeTime, 1); // yield until next tick (should be 1ms) so other tasks can do stuff
-        SendN2kWind();
-        NMEA2000.ParseMessages();
-        // record the number of devices on n2k bus
-        n2kConnected = locN2KDeviceList->Count();
-        // update msg counting wdog
-        n2kMsgWatchdog();
-    } // end for
-    vTaskDelete(NULL); // should never get here...
+  #if (configTICK_RATE_HZ != 1000)
+  #warning "set FreeRTOS tick rate to 1000Hz in menuconfig!"
+    ESP_LOGW(TAG, "set FreeRTOS tick rate to 1000Hz in menuconfig!");
+  #endif
+  pxPreviousWakeTime = xTaskGetTickCount();
+  // main N2K processing loop
+  for (;;)
+  {
+      // reset previous wake time
+      vTaskDelayUntil(&pxPreviousWakeTime, 1); // yield until next tick (should be 1ms) so other tasks can do stuff
+      SendN2kWind();
+      NMEA2000.ParseMessages();
+      // record the number of devices on n2k bus
+      n2kConnected = locN2KDeviceList->Count();
+      // update msg counting wdog
+      n2kMsgWatchdog();
+  } // end for
+  vTaskDelete(NULL); // should never get here...
 } // end n2k task
 
 // Initialize N2K task
@@ -257,6 +263,7 @@ err_out:
     return result;
 } //end OwnN2KInit
 
+// handle engineRapidUpdate message
 void engineRapidUpdate(const tN2kMsg &N2kMsg) {
     unsigned char SID;
     if (ParseN2kEngineParamRapid(N2kMsg,SID,locEngRPM,locEngBoost,locEngTilt) ) {
@@ -266,6 +273,7 @@ void engineRapidUpdate(const tN2kMsg &N2kMsg) {
     } // end if
 } // end rapidUpdate
 
+// handle engineDynamicUpdate message
 void engineDynamicUpdate(const tN2kMsg &N2kMsg){
     unsigned char SID;
     // from nmea2k def'ns
@@ -280,6 +288,7 @@ void engineDynamicUpdate(const tN2kMsg &N2kMsg){
     } // end if
   } // end enfineDynamicUpdate
 
+// handle fluidLevel message
 void fluidLevel(const tN2kMsg &N2kMsg){
     unsigned char SID;
     if (ParseN2kFluidLevel(N2kMsg, SID, locFluidType, locLevel, locCapacity) ) {
@@ -290,6 +299,7 @@ void fluidLevel(const tN2kMsg &N2kMsg){
     } // end if
 } // end fluidLevel
 
+// handle batteryStatus message
 void batteryStatus(const tN2kMsg &N2kMsg){
     unsigned char SID;
     /*inline bool ParseN2kDCBatStatus(const tN2kMsg &N2kMsg, unsigned char &BatteryInstance, double &BatteryVoltage, double &BatteryCurrent,
@@ -303,6 +313,7 @@ void batteryStatus(const tN2kMsg &N2kMsg){
     } // end if
 } // end batteryStatus
 
+// handle temperatureExtended message
 void temperatureExtended(const tN2kMsg &N2kMsg){
     unsigned char SID, locTempInstance;
     /*bool ParseN2kPGN130316(const tN2kMsg &N2kMsg, unsigned char &SID, unsigned char &TempInstance, tN2kTempSource &TempSource,
@@ -320,8 +331,9 @@ void temperatureExtended(const tN2kMsg &N2kMsg){
     } // end if
 } // end temperatureExtended
 
+// handle cogsogRapid message
 void cogsogRapid(const tN2kMsg &N2kMsg){
-    unsigned char SID, locTempInstance;
+    unsigned char SID;
     /*inline bool ParseN2kCOGSOGRapid(const tN2kMsg &N2kMsg, unsigned char &SID, tN2kHeadingReference &ref, double &COG, double &SOG) {
         return ParseN2kPGN129026(N2kMsg,SID,ref,COG,SOG); */
     if (ParseN2kCOGSOGRapid(N2kMsg, SID, locRef, locCOG, locSOG) ) {

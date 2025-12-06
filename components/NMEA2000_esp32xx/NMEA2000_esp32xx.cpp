@@ -45,9 +45,11 @@ can.h library, which may cause even naming problem.
   static const char *TAG = "TWAI_S3";
 #endif
 
+// added to allow locN2KDeviceList code to function. At link code was missing the millis() call
+// this workaround fixed the build, probably a path issue....sigh
 unsigned long IRAM_ATTR millis() {
   return (unsigned long) (esp_timer_get_time() / 1000ULL);
-}
+} // end millis
 
 bool tNMEA2000_esp32xx::CanInUse=false;
 tNMEA2000_esp32xx *pNMEA2000_esp32c3=0;

@@ -1,5 +1,5 @@
 // uncomment to enable debugging
-#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+// #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -60,7 +60,7 @@ static bool printId(const OneWireNg::Id& id)
     printf("\n");
 
     return (name != NULL);
-}
+} // end printid
 
 static void printScratchpad(const DSTherm::Scratchpad& scrpd)
 {
@@ -82,7 +82,7 @@ static void printScratchpad(const DSTherm::Scratchpad& scrpd)
         printf("-");
     }
     printf("%d.%04d C\n", (int)temp / 16, (10000 * ((int)temp % 16)) / 16);
-}
+} // end printscratchpad
 
 // This is a FreeRTOS task
 void OneWire_task(void *pvParameters)

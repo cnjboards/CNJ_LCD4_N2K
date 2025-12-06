@@ -1,3 +1,6 @@
+// uncomment to enable debugging
+// #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+
 #include <string.h>
 #include <float.h>
 #include <sys/param.h>
@@ -40,7 +43,6 @@ bool myWifiStaIpValid = false;
 /* FreeRTOS event group to signal when we are connected*/
 EventGroupHandle_t s_wifi_event_group;
 
-static const char *TAG = "wifi";
 static const char *TAG_AP = "WiFi SoftAP";
 static const char *TAG_STA = "WiFi Sta";
 static int s_retry_num = 0;

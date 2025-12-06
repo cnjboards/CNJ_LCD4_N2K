@@ -1,10 +1,10 @@
-/*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: CC0-1.0
- */
+// uncomment to enable debugging
+// #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
 
+// cnj lcd4
 #include <lvgl.h>
+#include "lvgl_port.h"
+#include "display.h"
 #include <string.h>
 #include <float.h>
 #include "esp_log.h"
@@ -28,15 +28,12 @@
 #include "esp_lcd_touch_gt911.h"
 #include "esp_lcd_st7701.h"
 #include "driver/ledc.h"
-#include "lv_demos.h"
-#include "lvgl_port.h"
 #include "esp_io_expander_tca9554.h"
 #include "driver/gpio.h"
 #include "OwnN2K.h"
 #include "waveshare-display.h"
 #include "wifi.h"
 #include "Exio.h"
-#include "display.h"
 
 // forward declaration
 static void ledc_init(void);
@@ -45,19 +42,21 @@ extern int initExio();
 
 #define NODE "CNJ_LCD4_N2K"
 static const char *TAG = NODE;
-#define WIFI_SSID NODE /*"ESP32 OTA Update"*/
+#define WIFI_SSID NODE
 // chipid of the host
 uint32_t chipId;
+
 // global flag for startup complete
 bool startUpDelayDone=false;
 
+// instantiate the display
 esp_lcd_panel_handle_t lcd_handle = NULL;
 
+// handler for refresh
 IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
 {
     return lvgl_port_notify_rgb_vsync();
-}
-
+} // end rgb_lcd_on_vsync_event
 
 // set everything up  
 void app_main(void)
@@ -65,7 +64,7 @@ void app_main(void)
     uint8_t chipid [ 6 ];
     uint32_t err;
 
-    // derive a unique chip id from the burned in MAC address
+    // derive a unique chip id from the MAC address
     esp_efuse_mac_get_default ( chipid );
     for ( int i = 0 ; i < 6 ; i++ )
     chipId += ( chipid [ i ] << ( 7 * i ));
@@ -259,6 +258,7 @@ void app_main(void)
     startUpDelayDone=true;
 } //end app_main
 
+// used for pwm dimming
 static void ledc_init(void)
 {
     // Prepare and then apply the LEDC PWM timer configuration
