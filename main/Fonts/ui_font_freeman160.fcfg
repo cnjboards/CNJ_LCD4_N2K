@@ -1,0 +1,16 @@
+{
+  "codename": "freeman160",
+  "ttf_path": "/assets/Freeman-Regular.ttf",
+  "bin_path": "/assets\\ui_font_freeman160.bin",
+  "c_path": "/assets\\ui_font_freeman160.c",
+  "cfg_path": "/assets\\ui_font_freeman160.fcfg",
+  "size": 160,
+  "bpp": 1,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7f"
+  ],
+  "symbols": "",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

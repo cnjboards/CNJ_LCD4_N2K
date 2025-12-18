@@ -30,6 +30,8 @@ extern double locCOG;
 extern double locSOG;
 extern tN2kHeadingReference locRef;
 extern double locWindSpeed, locWindAngle;
+extern double locWindSpeedApp, locWindAngleApp;
+extern double locWindSpeedTrue, locWindAngleTrue;
 extern tN2kWindReference locWindReference;
 extern tN2kEngineDiscreteStatus1 locStat1; 
 extern tN2kEngineDiscreteStatus2 locStat2;

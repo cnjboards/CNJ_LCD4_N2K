@@ -5,6 +5,7 @@ extern "C" {
 
     void doLvglInit(void);
     void processDisplay(void);
+    void event_cb(lv_event_t * );
 
 #ifdef __cplusplus
 }

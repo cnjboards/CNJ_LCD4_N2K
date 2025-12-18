@@ -1,0 +1,16 @@
+{
+  "codename": "condensed60",
+  "ttf_path": "/assets/OpenSans_Condensed-Regular.ttf",
+  "bin_path": "/assets\\ui_font_condensed60.bin",
+  "c_path": "/assets\\ui_font_condensed60.c",
+  "cfg_path": "/assets\\ui_font_condensed60.fcfg",
+  "size": 60,
+  "bpp": 1,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7f"
+  ],
+  "symbols": "",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

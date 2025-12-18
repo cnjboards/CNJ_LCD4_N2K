@@ -4,6 +4,14 @@
 
 extern lv_obj_t *statusBar;
 
-extern "C" void initStatusStyle();
-extern "C" void buildStatusBar(lv_obj_t *);
-extern "C" void updateStatusBar(lv_timer_t *);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    void initStatusStyle();
+    void buildStatusBar(lv_obj_t *);
+    void updateStatusBar(lv_timer_t *);
+    
+#ifdef __cplusplus
+}
+#endif

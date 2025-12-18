@@ -2,7 +2,7 @@
 // #define N2K_SERIAL_DUMP
 
 // Uncomment to enable logging of n2k messages
-//#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -59,6 +59,8 @@ double locEngOilPres = 0, locEngOilTemp=0, locEngCoolTemp=0, locEngAltVolt=0, lo
 double locCOG=0, locSOG=0;
 tN2kHeadingReference locRef;
 double locWindSpeed, locWindAngle;
+double locWindSpeedApp, locWindAngleApp;
+double locWindSpeedTrue, locWindAngleTrue;
 tN2kWindReference locWindReference;
 unsigned char locBattInst;
 double locBattVolt, locBattCurrent, locBatteryTemp;
@@ -85,14 +87,16 @@ void fluidLevel(const tN2kMsg &);
 void batteryStatus(const tN2kMsg &);
 void temperatureExtended(const tN2kMsg &);
 void cogsogRapid(const tN2kMsg &);
+void windSpeed(const tN2kMsg &);
 
 tNMEA2000Handler NMEA2000Handlers[]={
   {127488L,&engineRapidUpdate},
   {127489L,&engineDynamicUpdate},
   {127505L,&fluidLevel},
   {127508L,&batteryStatus},
-  {129026, &cogsogRapid},
+  {129026L,&cogsogRapid},
   {130316L,&temperatureExtended},
+  {130306L,&windSpeed},
   {0,0}
 };
 
@@ -215,7 +219,7 @@ void N2K_task(void *pvParameters)
   {
       // reset previous wake time
       vTaskDelayUntil(&pxPreviousWakeTime, 1); // yield until next tick (should be 1ms) so other tasks can do stuff
-      SendN2kWind();
+      //SendN2kWind();
       NMEA2000.ParseMessages();
       // record the number of devices on n2k bus
       n2kConnected = locN2KDeviceList->Count();
@@ -341,3 +345,20 @@ void cogsogRapid(const tN2kMsg &N2kMsg){
         ESP_LOGV(TAG, "PGN 129026 COGSOG Rapid --- COG %.2f SOG %.2f m/s", locCOG, locSOG);
     } // end if
 } // end cogsograpid
+
+// handle windspeed
+void windSpeed(const tN2kMsg &N2kMsg){
+  unsigned char SID;
+  if (ParseN2kPGN130306(N2kMsg, SID, locWindSpeed, locWindAngle, locWindReference)){
+    if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
+    ESP_LOGV(TAG, "PGN 130306 wind speed --- windspd %.2f windang %.2f type %i", locWindSpeed, locWindAngle, locWindReference);
+    if (locWindReference == N2kWind_Apparent) {
+      locWindSpeedApp = locWindSpeed;
+      locWindAngleApp = locWindAngle;
+    } // end if
+    if (locWindReference == N2kWind_True_North) {
+      locWindSpeedTrue = locWindSpeed;
+      locWindAngleTrue = locWindAngle;      
+    } // end if
+  } // end if
+} // end windSpeed

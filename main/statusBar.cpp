@@ -30,45 +30,47 @@ extern "C" void initStatusStyle(void){
   lv_style_set_bg_color(&status_style, lv_color_hex(0x808080));
   lv_style_set_border_width(&status_style, 0);
   lv_style_set_border_color(&status_style, lv_color_black());
-  lv_style_set_text_font(&status_style, &lv_font_montserrat_14);
+  lv_style_set_text_font(&status_style, &lv_font_montserrat_16);
  
 } // end initStatusStyle
+
+#define statusTextYOffset 10
 
 // generic status bar
 extern "C" void buildStatusBar(lv_obj_t *parent) {
 
-  // derive the status bar hieght
-  lv_coord_t sBarHeight = (LVGL_PORT_V_RES/13);
+  // text hieght for status bar
+  lv_coord_t sTextHeight = (LVGL_PORT_V_RES/13); // 36 pixels
 
   // header bar at top of screen
   statusBar = lv_obj_create(parent);
   lv_obj_add_style(statusBar, &status_style, 0);
-  lv_obj_set_size(statusBar, LVGL_PORT_H_RES, sBarHeight);
+  lv_obj_set_size(statusBar, lv_pct(100), lv_pct(7)); // 33 pixels high
   lv_obj_align(statusBar, LV_ALIGN_TOP_LEFT, 1, 2);
   lv_obj_remove_style(statusBar, NULL, LV_PART_SCROLLBAR | LV_STATE_ANY);
 
   // wifi indicator
   wifiLabel = lv_label_create(statusBar);
-  lv_obj_align(wifiLabel, LV_ALIGN_LEFT_MID, 2, 8);
-  lv_obj_set_size(wifiLabel, 70, sBarHeight);
+  lv_obj_align(wifiLabel, LV_ALIGN_LEFT_MID, 2, statusTextYOffset);
+  lv_obj_set_size(wifiLabel, 70, sTextHeight);
   lv_label_set_text(wifiLabel, "WiFi " LV_SYMBOL_CLOSE);
 
   // ip address if connected
   ipLabel = lv_label_create(statusBar);
-  lv_obj_align(ipLabel, LV_ALIGN_LEFT_MID, 72, 8);
-  lv_obj_set_size(ipLabel, 180, sBarHeight);
+  lv_obj_align(ipLabel, LV_ALIGN_LEFT_MID, 72, statusTextYOffset);
+  lv_obj_set_size(ipLabel, 170, sTextHeight);
   lv_label_set_text(ipLabel, "IP: ");
 
   // ssid if connected
   ssidLabel = lv_label_create(statusBar);
-  lv_obj_align(ssidLabel, LV_ALIGN_LEFT_MID, 210, 8);
-  lv_obj_set_size(ssidLabel, 140, sBarHeight);
+  lv_obj_align(ssidLabel, LV_ALIGN_LEFT_MID, 210, statusTextYOffset);
+  lv_obj_set_size(ssidLabel, 130, sTextHeight);
   lv_label_set_text(ssidLabel, "SSID: ");
 
   // N2K if connected
   n2KLabel = lv_label_create(statusBar);
-  lv_obj_align(n2KLabel, LV_ALIGN_LEFT_MID, 350, 8);
-  lv_obj_set_size(n2KLabel, 130, sBarHeight);
+  lv_obj_align(n2KLabel, LV_ALIGN_LEFT_MID, 340, statusTextYOffset);
+  lv_obj_set_size(n2KLabel, 130, sTextHeight);
   lv_style_set_text_color(&status_style, lv_color_make(100,10,10));
   lv_label_set_text(n2KLabel, "N2K: Down");
 
