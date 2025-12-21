@@ -9,8 +9,11 @@ lv_style_t screen5_style;
 lv_style_t largeGuageStyle;
 lv_style_t smallGuageStyle;
 lv_style_t indicator_style;
+lv_style_t indicator_style_noBorder;
 lv_style_t smallIndicator_style;
+lv_style_t smallIndicator_style_noBorder;
 lv_style_t largeIndicator_style;
+lv_style_t largeIndicator_style_noBorder;
 
 // setup all lvgl styles
 extern "C" void setStyle() {
@@ -38,7 +41,7 @@ extern "C" void setStyle() {
 
   // large meter style
   lv_style_init(&largeGuageStyle);
-  lv_style_set_bg_color(&largeGuageStyle, lv_color_hex(0x808080));
+  lv_style_set_bg_color(&largeGuageStyle, lv_color_hex(0x3f3636)); //0x2a2424
   lv_style_set_border_color(&largeGuageStyle, lv_color_black());
   lv_style_set_border_width(&largeGuageStyle, 0);
   lv_style_set_bg_opa(&largeGuageStyle, 100);
@@ -47,7 +50,7 @@ extern "C" void setStyle() {
 
   // large meter style
   lv_style_init(&smallGuageStyle);
-  lv_style_set_bg_color(&smallGuageStyle, lv_color_hex(0x808080));
+  lv_style_set_bg_color(&smallGuageStyle, lv_color_hex(0x2a2424));
   lv_style_set_border_color(&smallGuageStyle, lv_color_black());
   lv_style_set_bg_opa(&smallGuageStyle, 100);
   lv_style_set_text_color(&smallGuageStyle, lv_color_white());
@@ -58,7 +61,17 @@ extern "C" void setStyle() {
   lv_style_set_border_width(&indicator_style, 4);
   lv_style_set_radius(&indicator_style,4);
   lv_style_set_border_color(&indicator_style, lv_color_black()/*lv_palette_main(LV_PALETTE_GREY)*/);
+  lv_style_set_text_color(&indicator_style, lv_color_white());
   lv_style_set_text_font(&indicator_style, &lv_font_montserrat_20);
+
+  // style for indicator readouts
+  lv_style_init(&indicator_style_noBorder);
+  lv_style_set_border_width(&indicator_style_noBorder, 0);
+  lv_style_set_radius(&indicator_style_noBorder,4);
+  lv_style_set_bg_color(&indicator_style_noBorder, lv_color_hex(0x2a2424));
+  lv_style_set_bg_opa(&indicator_style_noBorder, 75);
+  lv_style_set_text_color(&indicator_style_noBorder, lv_color_white());
+  lv_style_set_text_font(&indicator_style_noBorder, &lv_font_montserrat_20);
 
   // style for indicator readouts
   lv_style_init(&largeIndicator_style);
@@ -71,11 +84,27 @@ extern "C" void setStyle() {
   lv_style_set_text_font(&largeIndicator_style, &lv_font_montserrat_42);
 
   // style for indicator readouts
+  lv_style_init(&largeIndicator_style_noBorder);
+  lv_style_set_border_color(&largeIndicator_style_noBorder, lv_color_hex(0x2a2424));
+  lv_style_set_border_width(&largeIndicator_style_noBorder, 0);
+  lv_style_set_bg_color(&largeIndicator_style_noBorder, lv_color_hex(0x2a2424));
+  lv_style_set_bg_opa(&largeIndicator_style_noBorder, 75);
+  lv_style_set_text_color(&largeIndicator_style_noBorder, lv_color_white());
+  lv_style_set_text_font(&largeIndicator_style_noBorder, &lv_font_montserrat_42);
+
+  // style for indicator readouts
   lv_style_init(&smallIndicator_style);
   lv_style_set_border_width(&smallIndicator_style, 2);
   lv_style_set_radius(&smallIndicator_style,2);
   lv_style_set_border_color(&smallIndicator_style, lv_color_black());
   lv_style_set_text_font(&indicator_style, &lv_font_montserrat_12);
+
+  // style for indicator readouts
+  lv_style_init(&smallIndicator_style_noBorder);
+  lv_style_set_border_width(&smallIndicator_style_noBorder, 0);
+  lv_style_set_radius(&smallIndicator_style_noBorder,2);
+  lv_style_set_text_color(&smallIndicator_style_noBorder, lv_color_white());
+  lv_style_set_text_font(&smallIndicator_style_noBorder, &lv_font_montserrat_12);
 
   // init style elements for status bar
   initStatusStyle();

@@ -10,8 +10,11 @@ extern lv_style_t screen5_style;
 extern lv_style_t largeGuageStyle;
 extern lv_style_t smallGuageStyle;
 extern lv_style_t indicator_style;
+extern lv_style_t indicator_style_noBorder;
 extern lv_style_t smallIndicator_style;
+extern lv_style_t smallIndicator_style_noBorder;
 extern lv_style_t largeIndicator_style;
+extern lv_style_t largeIndicator_style_noBorder;
 
 #ifdef __cplusplus
 extern "C" {

@@ -56,12 +56,13 @@ typedef struct {
 // globals for n2k values
 double locEngRPM = 0;
 double locEngOilPres = 0, locEngOilTemp=0, locEngCoolTemp=0, locEngAltVolt=0, locEngFuelRate=0, locEngHours=0, locEngCoolPres=0, locEngFuelPres=0;
-double locCOG=0, locSOG=0;
+double locCOG=0, locSOG=0, locSTW=0;
 tN2kHeadingReference locRef;
 double locWindSpeed, locWindAngle;
 double locWindSpeedApp, locWindAngleApp;
 double locWindSpeedTrue, locWindAngleTrue;
 tN2kWindReference locWindReference;
+double locDepthBelowKeel;
 unsigned char locBattInst;
 double locBattVolt, locBattCurrent, locBatteryTemp;
 double locEngBoost;
@@ -88,6 +89,8 @@ void batteryStatus(const tN2kMsg &);
 void temperatureExtended(const tN2kMsg &);
 void cogsogRapid(const tN2kMsg &);
 void windSpeed(const tN2kMsg &);
+void boatSpeed(const tN2kMsg &);
+void boatDepth(const tN2kMsg &);
 
 tNMEA2000Handler NMEA2000Handlers[]={
   {127488L,&engineRapidUpdate},
@@ -97,6 +100,8 @@ tNMEA2000Handler NMEA2000Handlers[]={
   {129026L,&cogsogRapid},
   {130316L,&temperatureExtended},
   {130306L,&windSpeed},
+  {128259L,&boatSpeed},
+  {128267L,&boatDepth},
   {0,0}
 };
 
@@ -343,6 +348,7 @@ void cogsogRapid(const tN2kMsg &N2kMsg){
     if (ParseN2kCOGSOGRapid(N2kMsg, SID, locRef, locCOG, locSOG) ) {
         if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
         ESP_LOGV(TAG, "PGN 129026 COGSOG Rapid --- COG %.2f SOG %.2f m/s", locCOG, locSOG);
+
     } // end if
 } // end cogsograpid
 
@@ -362,3 +368,29 @@ void windSpeed(const tN2kMsg &N2kMsg){
     } // end if
   } // end if
 } // end windSpeed
+
+void boatSpeed(const tN2kMsg &N2kMsg)
+{
+  unsigned char SID;
+  double WaterReferenced;
+  double GroundReferenced;
+  tN2kSpeedWaterReferenceType SWRT;
+
+  if (ParseN2kBoatSpeed(N2kMsg, SID, WaterReferenced, GroundReferenced, SWRT)){
+    if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
+    locSOG = GroundReferenced;
+    locSTW = WaterReferenced;
+  } // end if
+} // end boatSpeed
+
+void boatDepth(const tN2kMsg &N2kMsg)
+{
+  unsigned char SID;
+  double DepthBelowTransducer;
+  double Offset;
+
+  if (ParseN2kWaterDepth(N2kMsg, SID, DepthBelowTransducer, Offset)){
+    if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
+    locDepthBelowKeel = DepthBelowTransducer;
+  } // end if
+} // end boatdepth

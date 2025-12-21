@@ -12,9 +12,11 @@ idf_component_register(SRCS "Screen2.cpp" "styles.cpp" "Screen1.cpp" "cnj_Lcd4_N
                             "images/engine_check.c" 
                             "images/oilFault.c" 
                             "images/tempFault.c" 
-                            "images/scale_back.c" 
+                            "images/scale_back.c"
+                            "images/scale_back_indexed.c"
                             "images/arrow_app.c" 
                             "images/arrow_true.c"
+                            "images/Indicator.c"
                             "images/Gulls.c"
                         INCLUDE_DIRS "."
                         EMBED_TXTFILES web/index.html)

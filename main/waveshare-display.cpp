@@ -22,10 +22,12 @@
 
 static const char *TAG = "CNJ_LCD4_WS_DISP_lib";
 uint32_t blState=0;
+bool flashBit=0;
 
 // timers for updating the screen
 static lv_timer_t *updateScreenTimer;
 static lv_timer_t *updateStatusBarTimer;
+static lv_timer_t *updateFlasherBitTimer;
 
 // screen 3 and the various screen objects
 static lv_obj_t *Screen3;
@@ -55,6 +57,7 @@ static void buildScreen3(void);
 static void buildScreen4(void);
 static void buildScreen5(void);
 static void updateScreen(lv_timer_t *);
+static void updateFlashBit(lv_timer_t *);
 static void buildScreenList(lv_obj_t *);
 
 // handle screen event
@@ -104,6 +107,8 @@ extern "C" void doLvglInit(){
     // start timer for screen processing
     updateScreenTimer = lv_timer_create(updateScreen, 250, NULL);
     updateStatusBarTimer = lv_timer_create(updateStatusBar, 1500, NULL);
+    updateFlasherBitTimer = lv_timer_create(updateFlashBit, 750, NULL);
+
     // bl state is true
     blState=1;
     // Set duty
@@ -319,3 +324,8 @@ void buildScreenList(lv_obj_t * obj)
     lv_obj_add_event_cb(btn, listEventHandler, LV_EVENT_CLICKED, NULL);
 
 } // end buildscreenlist
+
+// toggle a bit on a timer for screen indicators
+static void updateFlashBit(lv_timer_t *timer) {
+  flashBit = !flashBit;
+} // used for a flash bit
