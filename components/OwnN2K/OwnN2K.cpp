@@ -391,6 +391,6 @@ void boatDepth(const tN2kMsg &N2kMsg)
 
   if (ParseN2kWaterDepth(N2kMsg, SID, DepthBelowTransducer, Offset)){
     if (n2kNoMsgCnt) n2kNoMsgCnt--; // rx message
-    locDepthBelowKeel = DepthBelowTransducer;
+    locDepthBelowKeel = DepthBelowTransducer + Offset;
   } // end if
 } // end boatdepth

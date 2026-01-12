@@ -1,6 +1,3 @@
-[submodule "components/components/OneWireNg"]
-	path = components/components/OneWireNg
-	url = https://github.com/pstolarz/OneWireNg
 [submodule "components/OneWireNg"]
 	path = components/OneWireNg
 	url = https://github.com/pstolarz/OneWireNg
