@@ -33,6 +33,7 @@
 #include "OwnN2K.h"
 #include "waveshare-display.h"
 #include "wifi.h"
+#include "OwnMqtt.h"
 #include "Exio.h"
 
 // forward declaration
@@ -245,6 +246,11 @@ void app_main(void)
     ESP_LOGI(TAG, "Initialize OneWire");
     OneWireInit();
     ESP_LOGI(TAG, "Initialize OneWire done");
+
+    // Initialize Mqtt
+    ESP_LOGI(TAG, "Initialize MQTT");
+    OwnMqttInit();
+    ESP_LOGI(TAG, "Initialize MQTT done");
 
     #ifdef INCLUDE_DISPLAY
     // Lock the mutex due to the LVGL APIs are not thread-safe

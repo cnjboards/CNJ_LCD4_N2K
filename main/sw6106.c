@@ -1,3 +1,5 @@
+#define LOG_LOCAL_LEVEL ESP_LOG_WARN
+
 #include <stdio.h>
 #include <float.h>
 #include <string.h>

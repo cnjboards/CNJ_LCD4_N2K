@@ -2,7 +2,7 @@
 // #define N2K_SERIAL_DUMP
 
 // Uncomment to enable logging of n2k messages
-#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+#define LOG_LOCAL_LEVEL ESP_LOG_WARN /* Enable this to show verbose logging for this file only. */
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -25,7 +25,7 @@
 extern bool startUpDelayDone;
 extern uint32_t chipId;
 
-static const char *TAG = "WS_LCD4_N2K_lib";
+static const char *TAG = "CNJ_LCD4_N2K_lib";
 tNMEA2000_esp32xx NMEA2000;
 //tActisenseReader ActisenseReader;
 

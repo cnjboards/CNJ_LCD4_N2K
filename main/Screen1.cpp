@@ -15,6 +15,7 @@
 #include "statusBar.h"
 #include "styles.h"
 
+
 // lvgl objects for the various screens
 // screen 1 and the various screen objects
 lv_obj_t *Screen1;
@@ -475,73 +476,138 @@ static void buildAlternatorGuageRound() {
   lv_label_set_text(guageText, "Alternator Volts");
 } // end buildAlternatorGuage
 
-// Screen 1 refresh handler
+// Screen 1 refresh handler`
 // called from timer function when screen1 is active
 extern "C" void updateScreen1()
 {
     // needle is rpm/100 since guage is in 100's of rpm
-    lv_meter_set_indicator_value(engineRpmGauge, engineRpmIndic, (uint32_t)(locEngRPM/100));
-    // display engine rpm
-    lv_label_set_text_fmt(engineRPMIndicator, " %04ld ", (uint32_t)(locEngRPM));
+    #ifdef USEN2KDATA
+      lv_meter_set_indicator_value(engineRpmGauge, engineRpmIndic, (uint32_t)(locEngRPM/100));
+      lv_label_set_text_fmt(engineRPMIndicator, " %04ld ", (uint32_t)(locEngRPM));
     
-    // update check engine light, first bit of status word 1
-    if ((locStat1.Bits.CheckEngine == true)) {
-      if (flashBit == true)
-        lv_obj_clear_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);
-      else
-        lv_obj_add_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);      
-    } else {
-      lv_obj_add_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);
-    } // end if
+      // update check engine light, first bit of status word 1
+      if ((locStat1.Bits.CheckEngine == true)) {
+        if (flashBit == true)
+          lv_obj_clear_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);
+        else
+          lv_obj_add_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);      
+      } else {
+        lv_obj_add_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);
+      } // end if
 
-    // needle is oil pressure psi
-    uint32_t locOilP = (uint32_t)(locEngOilPres/6894.75);
-    lv_meter_set_indicator_value(engineOilGauge, engineOilIndic, locOilP);
-    // display oil pressure psi
-    lv_label_set_text_fmt(engineOilIndicator, " %03d Psi ", (int)locOilP);
+      // needle is oil pressure psi
+      uint32_t locOilP = (uint32_t)(locEngOilPres/6894.75);
+      lv_meter_set_indicator_value(engineOilGauge, engineOilIndic, locOilP);
+      // display oil pressure psi
+      lv_label_set_text_fmt(engineOilIndicator, " %03d Psi ", (int)locOilP);
 
-    // update low oil pressure light
-    if ((locStat1.Bits.LowOilPressure == true)) {
-      if (flashBit == true)
-        lv_obj_clear_flag(oilFlt, LV_OBJ_FLAG_HIDDEN);
-      else
+      // update low oil pressure light
+      if ((locStat1.Bits.LowOilPressure == true)) {
+        if (flashBit == true)
+          lv_obj_clear_flag(oilFlt, LV_OBJ_FLAG_HIDDEN);
+        else
+          lv_obj_add_flag(oilFlt, LV_OBJ_FLAG_HIDDEN);
+      } else {
         lv_obj_add_flag(oilFlt, LV_OBJ_FLAG_HIDDEN);
-    } else {
-      lv_obj_add_flag(oilFlt, LV_OBJ_FLAG_HIDDEN);
-    } // end if
+      } // end if
 
-    // display engine temperature
-    int32_t locEngTemp = (int32_t)((((locEngCoolTemp-273.15)*(9.0/5.0))+32.0));    
-    lv_meter_set_indicator_value(temperatureGuage, temperatureIndic, locEngTemp);
-    lv_label_set_text_fmt(temperatureIndicator, " %03d degF ", (int)locEngTemp);
+      // display engine temperature
+      int32_t locEngTemp = (int32_t)((((locEngCoolTemp-273.15)*(9.0/5.0))+32.0));    
+      lv_meter_set_indicator_value(temperatureGuage, temperatureIndic, locEngTemp);
+      lv_label_set_text_fmt(temperatureIndicator, " %03d degF ", (int)locEngTemp);
 
-    // update Hi temp light
-    if ((locStat1.Bits.OverTemperature == true)) {
-      if (flashBit == true)
-        lv_obj_clear_flag(tempFlt, LV_OBJ_FLAG_HIDDEN);
-      else
+      // update Hi temp light
+      if ((locStat1.Bits.OverTemperature == true)) {
+        if (flashBit == true)
+          lv_obj_clear_flag(tempFlt, LV_OBJ_FLAG_HIDDEN);
+        else
+          lv_obj_add_flag(tempFlt, LV_OBJ_FLAG_HIDDEN);
+      } else {
         lv_obj_add_flag(tempFlt, LV_OBJ_FLAG_HIDDEN);
-    } else {
-      lv_obj_add_flag(tempFlt, LV_OBJ_FLAG_HIDDEN);
-    } // end if
+      } // end if
 
-    // display alternator voltage
-    int32_t locEngVoltage = (int32_t)(locEngAltVolt * 10);
-    if (locEngVoltage <= 90)
-      locEngVoltage = 90;
-    lv_meter_set_indicator_value(alternatorGuage, alternatorIndic, locEngVoltage);      
-    lv_label_set_text_fmt(alternatorIndicator, " %04.1f Volts ", locEngAltVolt);
+      // display alternator voltage
+      int32_t locEngVoltage = (int32_t)(locEngAltVolt * 10);
+      if (locEngVoltage <= 90)
+        locEngVoltage = 90;
+      lv_meter_set_indicator_value(alternatorGuage, alternatorIndic, locEngVoltage);      
+      lv_label_set_text_fmt(alternatorIndicator, " %04.1f Volts ", locEngAltVolt);
 
-    // update sog
-    lv_label_set_text_fmt(ulIndicator, "%04.1f", (locSOG * 1.944));
+      // update sog
+      lv_label_set_text_fmt(ulIndicator, "%04.1f", (locSOG * 1.944));
 
-    // update wind speed rrue
-    lv_label_set_text_fmt(urIndicator, "%04.1f", (locWindSpeedTrue * 1.944));
+      // update wind speed rrue
+      lv_label_set_text_fmt(urIndicator, "%04.1f", (locWindSpeedTrue * 1.944));
 
-    // update stw
-    lv_label_set_text_fmt(llIndicator, "%04.1f", (locSTW * 1.944));
+      // update stw
+      lv_label_set_text_fmt(llIndicator, "%04.1f", (locSTW * 1.944));
 
-    // update depth
-    lv_label_set_text_fmt(lrIndicator, "%04d", (int)(locDepthBelowKeel * 3.28));
-    
+      // update depth
+      lv_label_set_text_fmt(lrIndicator, "%04d", (int)(locDepthBelowKeel * 3.28));
+    #else    
+      // display alternator voltage
+      int32_t locEngVoltage = (int32_t)(mqttEngAltVolt * 10);
+      if (locEngVoltage <= 90)
+        locEngVoltage = 90;
+      lv_meter_set_indicator_value(alternatorGuage, alternatorIndic, locEngVoltage);      
+      lv_label_set_text_fmt(alternatorIndicator, " %04.1f Volts ", mqttEngAltVolt);
+
+    // update check engine light, first bit of status word 1
+      if ((mqttCheckEngineAlarm == true)) {
+        if (flashBit == true)
+          lv_obj_clear_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);
+        else
+          lv_obj_add_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);      
+      } else {
+        lv_obj_add_flag(engineCheck, LV_OBJ_FLAG_HIDDEN);
+      } // end if
+
+      // needle is oil pressure psi
+      uint32_t locOilP = (uint32_t)(mqttEngOilPres/6894.75);
+      lv_meter_set_indicator_value(engineOilGauge, engineOilIndic, locOilP);
+      // display oil pressure psi
+      lv_label_set_text_fmt(engineOilIndicator, " %03d Psi ", (int)locOilP);
+
+      // update low oil pressure light
+      if ((mqttLowOilPressureAlarm == true)) {
+        if (flashBit == true)
+          lv_obj_clear_flag(oilFlt, LV_OBJ_FLAG_HIDDEN);
+        else
+          lv_obj_add_flag(oilFlt, LV_OBJ_FLAG_HIDDEN);
+      } else {
+        lv_obj_add_flag(oilFlt, LV_OBJ_FLAG_HIDDEN);
+      } // end if
+
+      // display engine temperature
+      int32_t locEngTemp = (int32_t)((((mqttEngCoolTemp-273.15)*(9.0/5.0))+32.0));    
+      lv_meter_set_indicator_value(temperatureGuage, temperatureIndic, locEngTemp);
+      lv_label_set_text_fmt(temperatureIndicator, " %03d degF ", (int)locEngTemp);
+
+      // update Hi temp light
+      if ((mqttOverTemperatureAlarm == true)) {
+        if (flashBit == true)
+          lv_obj_clear_flag(tempFlt, LV_OBJ_FLAG_HIDDEN);
+        else
+          lv_obj_add_flag(tempFlt, LV_OBJ_FLAG_HIDDEN);
+      } else {
+        lv_obj_add_flag(tempFlt, LV_OBJ_FLAG_HIDDEN);
+      } // end if
+
+    // display engine rpm
+      lv_meter_set_indicator_value(engineRpmGauge, engineRpmIndic, (uint32_t)(mqttEngRPM/100));
+      lv_label_set_text_fmt(engineRPMIndicator, " %04ld ", (uint32_t)(mqttEngRPM));
+
+      // update sog
+      lv_label_set_text_fmt(ulIndicator, "%04.1f", (mqttSOG * 1.944));
+
+      // update wind speed rrue
+      lv_label_set_text_fmt(urIndicator, "%04.1f", (mqttWindSpeedTrue * 1.944));
+
+      // update stw
+      lv_label_set_text_fmt(llIndicator, "%04.1f", (mqttSTW * 1.944));
+
+      // update depth
+      lv_label_set_text_fmt(lrIndicator, "%04d", (int)(mqttDepthBelowKeel * 3.28));
+
+    #endif
 } // end updatescreen1

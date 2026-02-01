@@ -11,6 +11,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_err.h"
+#include "esp_sleep.h"
 #include "Globals.h"
 #include "esp_lcd_panel_ops.h"
 #include "driver/ledc.h"
@@ -219,7 +220,10 @@ static void listEventHandler(lv_event_t * e)
         } else if (!strcmp(selectedItem,"Restart")){
           ESP_LOGI(TAG, "Reset Requested");              
           // reboot
-          esp_restart();     
+          //esp_restart(); 
+          // Reset instantly, preferred over esp_restart
+          esp_sleep_enable_timer_wakeup(1);
+          esp_deep_sleep_start();    
         // close sleceted so just close the screen list
         } else if (!strcmp(selectedItem,"Close")){
           // hide the list

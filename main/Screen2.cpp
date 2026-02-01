@@ -184,28 +184,52 @@ extern "C" void buildScreen2(void) {
 extern "C" void updateScreen2()
 {
   char buf[10];
-  
-  // update wind direction app
-  int32_t tmp = (uint32_t)(locWindAngleApp * 180 / PI);
-  lv_img_set_angle(ui_ArrowApp, (tmp * 10));
-  // wind dir true
-  tmp = (uint32_t)(locWindAngleTrue * 180 / PI);
-  lv_img_set_angle(ui_ArrowTrue, (tmp * 10));
 
-  // update wind speed app
-  sprintf(buf, "%0.1f", (locWindSpeedApp * 1.944));
-  lv_label_set_text(ui_AppWindSpd, buf);
+  #ifdef USEN2KDATA
+    // update wind direction app
+    int32_t tmp = (uint32_t)(locWindAngleApp * 180 / PI);
+    lv_img_set_angle(ui_ArrowApp, (tmp * 10));
+    // wind dir true
+    tmp = (uint32_t)(locWindAngleTrue * 180 / PI);
+    lv_img_set_angle(ui_ArrowTrue, (tmp * 10));
 
-  // update wind speed rrue
-  lv_label_set_text_fmt(urIndicator, "%04.1f", (locWindSpeedTrue * 1.944));
+    // update wind speed app
+    sprintf(buf, "%0.1f", (locWindSpeedApp * 1.944));
+    lv_label_set_text(ui_AppWindSpd, buf);
 
-  // update sog
-  lv_label_set_text_fmt(ulIndicator, "%04.1f", (locSOG * 1.944));
+    // update wind speed rrue
+    lv_label_set_text_fmt(urIndicator, "%04.1f", (locWindSpeedTrue * 1.944));
 
-  // update stw
-  lv_label_set_text_fmt(llIndicator, "%04.1f", (locSTW * 1.944));
+    // update sog
+    lv_label_set_text_fmt(ulIndicator, "%04.1f", (locSOG * 1.944));
 
-  // update depth
-  lv_label_set_text_fmt(lrIndicator, "%04d", (int)(locDepthBelowKeel * 3.28));
+    // update stw
+    lv_label_set_text_fmt(llIndicator, "%04.1f", (locSTW * 1.944));
 
+    // update depth
+    lv_label_set_text_fmt(lrIndicator, "%04d", (int)(locDepthBelowKeel * 3.28));
+  #else
+    // update wind direction app
+    int32_t tmp = (uint32_t)(mqttWindAngleApp * 180 / PI);
+    lv_img_set_angle(ui_ArrowApp, (tmp * 10));
+    // wind dir true
+    tmp = (uint32_t)(mqttWindAngleTrue * 180 / PI);
+    lv_img_set_angle(ui_ArrowTrue, (tmp * 10));
+
+    // update wind speed app
+    sprintf(buf, "%0.1f", (mqttWindSpeedApp * 1.944));
+    lv_label_set_text(ui_AppWindSpd, buf);
+
+    // update wind speed rrue
+    lv_label_set_text_fmt(urIndicator, "%04.1f", (mqttWindSpeedTrue * 1.944));
+
+    // update sog
+    lv_label_set_text_fmt(ulIndicator, "%04.1f", (mqttSOG * 1.944));
+
+    // update stw
+    lv_label_set_text_fmt(llIndicator, "%04.1f", (mqttSTW * 1.944));
+
+    // update depth
+    lv_label_set_text_fmt(lrIndicator, "%04d", (int)(mqttDepthBelowKeel * 3.28));
+  #endif
 } // end updatescreen2

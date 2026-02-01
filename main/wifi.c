@@ -1,5 +1,5 @@
 // uncomment to enable debugging
-// #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+#define LOG_LOCAL_LEVEL ESP_LOG_WARN /* Enable this to show verbose logging for this file only. */
 
 #include <string.h>
 #include <float.h>
@@ -43,19 +43,19 @@ bool myWifiStaIpValid = false;
 /* FreeRTOS event group to signal when we are connected*/
 EventGroupHandle_t s_wifi_event_group;
 
-static const char *TAG_AP = "WiFi SoftAP";
-static const char *TAG_STA = "WiFi Sta";
-static int s_retry_num = 0;
-
-bool uploadInProgress = false;
-char myIpAddressSta[16];
-
 /* The event group allows multiple bits for each event, but we only care about two events:
  * - we are connected to the AP with an IP
  * - we failed to connect after the maximum amount of retries */
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
 #define WIFI_STA_IP_VALID BIT2
+
+static const char *TAG_AP = "WiFi SoftAP";
+static const char *TAG_STA = "WiFi Sta";
+static int s_retry_num = 0;
+
+bool uploadInProgress = false;
+char myIpAddressSta[16];
 
 // AP ssid and passwd
 #define ESP_WIFI_AP_SSID "CNJ_LCD4_N2K"
@@ -172,7 +172,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
         wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *) event_data;
         ESP_LOGI(TAG_AP, "Station "MACSTR" joined, AID=%d",
-                 MAC2STR(event->mac), event->aid);
+                 MAC2STR(event->mac), event->aid);       
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STADISCONNECTED) {
         wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *) event_data;
         ESP_LOGI(TAG_AP, "Station "MACSTR" left, AID=%d, reason:%d",
@@ -316,9 +316,11 @@ void wifi_init_ap_sta(void)
         ESP_LOGI(TAG_STA, "connected to ap SSID:%s password:%s",
                  ESP_WIFI_STA_SSID, ESP_WIFI_STA_PASSWD);
         softap_set_dns_addr(esp_netif_ap,esp_netif_sta);
+        myWifiStaConnected = true;  
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG_STA, "Failed to connect to SSID:%s, password:%s",
                  ESP_WIFI_STA_SSID, ESP_WIFI_STA_PASSWD);
+        myWifiStaConnected = false;  
     } else {
         ESP_LOGE(TAG_STA, "UNEXPECTED EVENT");
         return;

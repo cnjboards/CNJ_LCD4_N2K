@@ -1,5 +1,5 @@
 // uncomment to enable debugging
-// #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+#define LOG_LOCAL_LEVEL ESP_LOG_WARN
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -49,39 +49,43 @@ static Placeholder<OneWireNg_CurrentPlatform> ow;
 /* returns false if not supported */
 static bool printId(const OneWireNg::Id& id)
 {
+    char buf[256];
+    int n=0;
     const char *name = DSTherm::getFamilyName(id);
 
-    for (size_t i = 0; i < sizeof(OneWireNg::Id); i++)
-        printf("%s%02x", (!i ? "" : ":"), id[i]);
+    for (size_t i = 0; i < sizeof(OneWireNg::Id); i++) {
+        n += snprintf(buf+n, (256-n), "%s%02x", (!i ? "" : ":"), id[i]);
+    }
 
     if (name)
-        printf(" -> %s", name);
+        n += snprintf(buf+n, (256-n)," -> %s", name);
 
-    printf("\n");
-
+    ESP_LOGI(TAG, "%s", buf);
     return (name != NULL);
 } // end printid
 
 static void printScratchpad(const DSTherm::Scratchpad& scrpd)
 {
+    char buf[256];
+    int n=0;
     const uint8_t *scrpd_raw = scrpd.getRaw();
 
-    printf("  Scratchpad:");
+    n += snprintf(buf+n, (256-n), "Scratchpad:");
     for (size_t i = 0; i < DSTherm::Scratchpad::LENGTH; i++)
-        printf("%c%02x", (!i ? ' ' : ':'), scrpd_raw[i]);
+        n += snprintf(buf+n, (256-n), "%c%02x", (!i ? ' ' : ':'), scrpd_raw[i]);
 
-
-    printf("; Th:%d; Tl:%d; Resolution:%d",
+    n += snprintf(buf+n, (256-n), "; Th:%d; Tl:%d; Resolution:%d",
         scrpd.getTh(), scrpd.getTl(),
         9 + (int)(scrpd.getResolution() - DSTherm::RES_9_BIT));
 
     long temp = scrpd.getTemp2();
-    printf("; Temp:");
+    n += snprintf(buf+n, (256-n), "; Temp:");
     if (temp < 0) {
         temp = -temp;
-        printf("-");
+        n += snprintf(buf+n, (256-n), "-");
     }
-    printf("%d.%04d C\n", (int)temp / 16, (10000 * ((int)temp % 16)) / 16);
+    n += snprintf(buf+n, (256-n), "%d.%04d C\n", (int)temp / 16, (10000 * ((int)temp % 16)) / 16);
+    ESP_LOGI(TAG, "%s", buf);
 } // end printscratchpad
 
 // This is a FreeRTOS task
@@ -125,7 +129,7 @@ void OneWire_task(void *pvParameters)
             }
         }
     #endif
-        printf("----------\n");
+        //printf("----------\n");
 
         // do every few seconds or so
         vTaskDelay(2000);
@@ -137,7 +141,7 @@ void OneWire_task(void *pvParameters)
 extern "C" int OneWireInit()
 {
     // enable verbose logging in this module
-    esp_log_level_set(TAG, ESP_LOG_VERBOSE);
+    esp_log_level_set(TAG, LOG_LOCAL_LEVEL);
 
     esp_err_t result = ESP_OK;
 #ifdef CONFIG_PWR_CTRL_PIN
