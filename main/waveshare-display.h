@@ -11,6 +11,9 @@ extern "C" {
 }
 #endif
 
+extern lv_obj_t *screenList;
+extern lv_obj_t *keyboard;
+
 // backlight control
 #define LEDC_TIMER              LEDC_TIMER_0
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE

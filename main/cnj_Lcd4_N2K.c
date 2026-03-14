@@ -1,5 +1,5 @@
 // uncomment to enable debugging
-// #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
 
 // cnj lcd4
 #include <lvgl.h>
@@ -86,6 +86,7 @@ void app_main(void)
 
     // setup wifi ap, sta and start ota webserver
     ESP_LOGI(TAG, "ESP_WIFI_MODE_AP_STA");
+    //startWifi();
     wifi_init_ap_sta();
 
     // ***************** Start I2C ***********************
@@ -262,6 +263,13 @@ void app_main(void)
     } // end if
     #endif
     startUpDelayDone=true;
+
+    // dont exit app_main
+    while(true){
+        // sleep a bit
+        vTaskDelay(500);
+    } // end while --- never exit app_main
+
 } //end app_main
 
 // used for pwm dimming

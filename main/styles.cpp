@@ -14,10 +14,22 @@ lv_style_t smallIndicator_style;
 lv_style_t smallIndicator_style_noBorder;
 lv_style_t largeIndicator_style;
 lv_style_t largeIndicator_style_noBorder;
+lv_style_t border_style;
+lv_style_t popupBox_style;
 
 // setup all lvgl styles
 extern "C" void setStyle() {
   
+  lv_style_init(&border_style);
+  lv_style_set_border_width(&border_style, 2);
+  lv_style_set_border_color(&border_style, lv_color_black());
+
+  lv_style_init(&popupBox_style);
+  lv_style_set_radius(&popupBox_style, 10);
+  lv_style_set_bg_opa(&popupBox_style, LV_OPA_COVER);
+  lv_style_set_border_color(&popupBox_style, lv_palette_main(LV_PALETTE_BLUE));
+  lv_style_set_border_width(&popupBox_style, 5);
+
   // screen styles
   lv_style_init(&screen1_style);
   lv_style_set_bg_color(&screen1_style, lv_color_black());

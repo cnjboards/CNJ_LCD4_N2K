@@ -209,6 +209,10 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             ESP_LOGE(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
         } // end if
         break;
+    case MQTT_EVENT_BEFORE_CONNECT:
+        ESP_LOGI(TAG, "MQTT_EVENT_BEFORE_CONNECT, msg_id=%d", event->msg_id);
+        ESP_LOGI(TAG, "Client initialized, waiting for mqtt broker.");
+        break;
     default:
         ESP_LOGE(TAG, "Other mqtt event id:%d", event->event_id);
         break;

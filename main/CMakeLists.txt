@@ -4,6 +4,7 @@ idf_component_register(SRCS "Screen2.cpp" "styles.cpp" "Screen1.cpp" "cnj_Lcd4_N
                             "statusBar.cpp" 
                             "Screen1.cpp"
                             "Screen2.cpp"
+                            "Screen5.cpp"
                             "styles.cpp"
                             "Exio.cpp" 
                             "OneWire.cpp" 

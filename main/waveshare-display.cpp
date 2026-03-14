@@ -19,6 +19,7 @@
 #include "statusBar.h"
 #include "screen1.h"
 #include "screen2.h"
+#include "screen5.h"
 #include "styles.h"
 
 static const char *TAG = "CNJ_LCD4_WS_DISP_lib";
@@ -37,14 +38,13 @@ static lv_obj_t *ui_image;
 // screen 4 and the various screen objects
 static lv_obj_t *Screen4;
 
-// screen 5 and the various screen objects
-static lv_obj_t *Screen5;
-
 // used for screen navigation selection list
-static lv_obj_t *screenList;
+lv_obj_t *screenList;
 static lv_obj_t *screen3Text;
 static lv_obj_t *screen4Text;
-static lv_obj_t *screen5Text;
+
+// keyboard object
+lv_obj_t *keyboard;
 
 // list of screen names, simple but works
 #define SCREEN_1_NAME "Motoring"
@@ -56,12 +56,12 @@ static lv_obj_t *screen5Text;
 // forward declarations
 static void buildScreen3(void);
 static void buildScreen4(void);
-static void buildScreen5(void);
 static void updateScreen(lv_timer_t *);
 static void updateFlashBit(lv_timer_t *);
 static void buildScreenList(lv_obj_t *);
+static void makeKeyboard();
 
-// handle screen event
+// handle global screen event...used to bring up the selection list
 extern "C" void event_cb(lv_event_t * e)
 {
   // check if BL was off and turn on if screen touched
@@ -100,6 +100,8 @@ extern "C" void doLvglInit(){
     buildScreen3();
     buildScreen4();
     buildScreen5();
+
+    makeKeyboard();
 
     // activate main screen (screen 1) on startup
     lv_scr_load(Screen1);
@@ -171,6 +173,7 @@ static void buildScreen4(void) {
 
 } // end buildScreen4
 
+#if 0
 // screen 5 builder
 static void buildScreen5(void) {
   // main screen frame
@@ -191,13 +194,23 @@ static void buildScreen5(void) {
   lv_label_set_text(screen5Text,SCREEN_5_NAME);
 
 } // end buildScreen5
+#endif
+// create a keyboard for later use
+static void makeKeyboard() {
+  keyboard = lv_keyboard_create(lv_scr_act());
+  //lv_obj_set_style_z_index(keyboard, 10, LV_STATE_DEFAULT); // Ensures it's on top
+  // lv_keyboard_set_textarea(keyboard, my_textarea); text area is where the characters go
+  lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
+} // end makekeyboard
 
 // screen list handler - manage screen navigation
 static void listEventHandler(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t * obj = lv_event_get_target(e);
-    if(code == LV_EVENT_CLICKED) {
+    
+    // only process event if selection list is not hidden
+    if(code == LV_EVENT_CLICKED && !lv_obj_has_flag(screenList, LV_OBJ_FLAG_HIDDEN)) {
 
         /*String selectedItem = String(lv_list_get_btn_text(screenList, obj));*/
         const char* selectedItem = lv_list_get_btn_text(screenList, obj);
@@ -290,6 +303,7 @@ static void updateScreen(lv_timer_t *timer)
   }else if (active_screen == Screen4) {
       // process screen 4
   }else if (active_screen == Screen5) {
+      updateScreen5();
       // process screen 5
   } // end if
 } // end updateScreen

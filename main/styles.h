@@ -15,6 +15,8 @@ extern lv_style_t smallIndicator_style;
 extern lv_style_t smallIndicator_style_noBorder;
 extern lv_style_t largeIndicator_style;
 extern lv_style_t largeIndicator_style_noBorder;
+extern lv_style_t border_style;
+extern lv_style_t popupBox_style;
 
 #ifdef __cplusplus
 extern "C" {

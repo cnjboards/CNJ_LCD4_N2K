@@ -1,5 +1,5 @@
 // uncomment to enable debugging
-#define LOG_LOCAL_LEVEL ESP_LOG_WARN /* Enable this to show verbose logging for this file only. */
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE /* Enable this to show verbose logging for this file only. */
 
 #include <string.h>
 #include <float.h>
@@ -27,6 +27,8 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#define WIFI_MGMT_TASK_PRIORITY 5
+
 // hc wifi credentials for now
 #define ESP_WIFI_STA_SSID "BELL838"
 #define ESP_WIFI_STA_PASSWD "C1E34F964543"
@@ -40,6 +42,13 @@ bool myWifiStaIpValid = false;
 #define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_BOTH
 #define H2E_IDENTIFIER ""
 
+TaskHandle_t beginWifiTaskHandle;
+static void wifiStaApTask(void *);
+TaskHandle_t wifiScanTaskHandle;
+static void wifiScanTask(void *);
+// used to store list of wifi networks
+//std::vector<String> foundWifiList;
+
 /* FreeRTOS event group to signal when we are connected*/
 EventGroupHandle_t s_wifi_event_group;
 
@@ -52,6 +61,7 @@ EventGroupHandle_t s_wifi_event_group;
 
 static const char *TAG_AP = "WiFi SoftAP";
 static const char *TAG_STA = "WiFi Sta";
+static const char *TAG = "WiFi task";
 static int s_retry_num = 0;
 
 bool uploadInProgress = false;
@@ -283,7 +293,127 @@ void wifi_init_ap_sta(void)
                     NULL,
                     NULL));
 
-    /*Initialize WiFi */
+    /* Initialize WiFi */
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+
+    /* Initialize AP */
+    ESP_LOGI(TAG_AP, "ESP_WIFI_MODE_AP");
+    esp_netif_t *esp_netif_ap = wifi_init_softap();
+
+    /* Initialize STA */
+    ESP_LOGI(TAG_STA, "ESP_WIFI_MODE_STA");
+    esp_netif_t *esp_netif_sta = wifi_init_sta();
+
+    /* Start WiFi */
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    /*
+     * Wait until either the connection is established (WIFI_CONNECTED_BIT) or
+     * connection failed for the maximum number of re-tries (WIFI_FAIL_BIT).
+     * The bits are set by event_handler() (see above)
+     */
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                           pdFALSE,
+                                           pdFALSE,
+                                           pdMS_TO_TICKS(5000)); // wait 5 seconds to connect
+
+    /* xEventGroupWaitBits() returns the bits before the call returned,
+     * hence we can test which event actually happened. */
+    if (bits & WIFI_CONNECTED_BIT) {
+        ESP_LOGI(TAG_STA, "connected to ap SSID:%s password:%s",
+                 ESP_WIFI_STA_SSID, ESP_WIFI_STA_PASSWD);
+        softap_set_dns_addr(esp_netif_ap,esp_netif_sta);
+        myWifiStaConnected = true;  
+    } else if (bits & WIFI_FAIL_BIT) {
+        ESP_LOGI(TAG_STA, "Failed to connect to SSID:%s, password:%s",
+                 ESP_WIFI_STA_SSID, ESP_WIFI_STA_PASSWD);
+        myWifiStaConnected = false;  
+    } else {
+        ESP_LOGE(TAG_STA, "UNEXPECTED EVENT");
+        return;
+    } // end if
+
+    /* Set sta as the default interface */
+    esp_netif_set_default_netif(esp_netif_sta);
+
+    /* Enable napt on the AP netif */
+    if (esp_netif_napt_enable(esp_netif_ap) != ESP_OK) {
+        ESP_LOGE(TAG_STA, "NAPT not enabled on the netif: %p", esp_netif_ap);
+    }
+
+    // now start the web server for ota
+    ESP_ERROR_CHECK(http_server_init());
+
+    esp_ota_img_states_t ota_state;
+    const esp_partition_t *partition = esp_ota_get_running_partition();
+	if (esp_ota_get_state_partition(partition, &ota_state) == ESP_OK) {
+		if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
+			esp_ota_mark_app_valid_cancel_rollback();
+		} // end if
+	} // end if
+} // end wifi_init_ap_sta
+
+// start the main wifi task to manage wifi connection
+int startWifi(void){
+  int result;
+
+  // should be called before task is started
+  ESP_ERROR_CHECK(esp_netif_init());
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+  /* Initialize event group */
+  s_wifi_event_group = xEventGroupCreate();
+
+  /* Register Event handler */
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                ESP_EVENT_ANY_ID,
+                &wifi_event_handler,
+                NULL,
+                NULL));
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                IP_EVENT_STA_GOT_IP,
+                &wifi_event_handler,
+                NULL,
+                NULL));
+
+  // create/start task for managing wifi conection
+  xTaskCreate(&wifiStaApTask,
+              "WifiTask",
+              8092,
+              NULL,
+              WIFI_MGMT_TASK_PRIORITY,
+              &beginWifiTaskHandle);
+
+    // check for issues on create
+    if (beginWifiTaskHandle == NULL)
+    {
+        ESP_LOGE(TAG, "Unable to create wifiTask task.");
+        result = ESP_ERR_NO_MEM;
+        goto err_out;
+    } // end if
+
+err_out:
+    // clean up
+    if (result != ESP_OK)
+    {
+        if (beginWifiTaskHandle != NULL)
+        {
+            vTaskDelete(beginWifiTaskHandle);
+            beginWifiTaskHandle = NULL;
+        } // end if
+    } // end if
+    return result;
+} // end startWifi
+
+// task to manage wifi
+static void wifiStaApTask(void *pvParameters){
+
+    ESP_LOGI(TAG, "Wifi Management task Starting");
+
+    /* Initialize WiFi */
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
@@ -344,4 +474,39 @@ void wifi_init_ap_sta(void)
 			esp_ota_mark_app_valid_cancel_rollback();
 		} // end if
 	} // end if
-} // end wifi_init_ap_sta
+
+    // now loop
+    while (1){
+        // sleep a bit
+        vTaskDelay(500);
+    } // end while
+    // clean up task
+    vTaskDelete(NULL);
+} // end wifiStaApTask
+
+
+#if 0
+ static void networkScanner() {
+  xTaskCreate(scanWIFITask,
+              "ScanWIFITask",
+              4096,
+              NULL,
+              1,
+              &ntScanTaskHandler);
+}
+
+static void scanWIFITask(void *pvParameters) {
+  while (1) {
+    foundWifiList.clear();
+    int n = WiFi.scanNetworks();
+    vTaskDelay(10);
+    for (int i = 0; i < n; ++i) {
+      String item = WiFi.SSID(i) + " (" + WiFi.RSSI(i) + ") " + ((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
+      foundWifiList.push_back(item);
+      vTaskDelay(10);
+    }
+    vTaskDelay(5000);
+  }
+}
+#endif
+
